@@ -141,10 +141,10 @@ class ParcelViewModel(
 
     fun currentSettings(): AppSettings = settings.current()
 
-    fun saveSettings(anthropicApiKey: String, dhlApiKey: String, ship24ApiKey: String) {
+    fun saveSettings(anthropicApiKey: String, dhlApiKey: String, tracktryApiKey: String) {
         settings.anthropicApiKey = anthropicApiKey
         settings.dhlApiKey = dhlApiKey
-        settings.ship24ApiKey = ship24ApiKey
+        settings.tracktryApiKey = tracktryApiKey
     }
 
     companion object {

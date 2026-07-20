@@ -26,11 +26,11 @@ import de.versandapp.data.settings.AppSettings
 fun SettingsDialog(
     initial: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (anthropicApiKey: String, dhlApiKey: String, ship24ApiKey: String) -> Unit,
+    onSave: (anthropicApiKey: String, dhlApiKey: String, tracktryApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
-    var ship24Key by remember { mutableStateOf(initial.ship24ApiKey) }
+    var tracktryKey by remember { mutableStateOf(initial.tracktryApiKey) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -38,16 +38,16 @@ fun SettingsDialog(
         text = {
             Column {
                 OutlinedTextField(
-                    value = ship24Key,
-                    onValueChange = { ship24Key = it },
-                    label = { Text("Ship24 API-Key") },
+                    value = tracktryKey,
+                    onValueChange = { tracktryKey = it },
+                    label = { Text("Tracktry API-Key") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Haupt-Tracking-Quelle für alle Dienste weltweit (inkl. China). " +
-                        "Kostenloser Key auf ship24.com (10 Sendungen/Monat gratis).",
+                        "Key auf tracktry.com – Abrechnung pro Sendung im Cent-Bereich.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -62,7 +62,7 @@ fun SettingsDialog(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Für die KI-Mail-Erkennung; dient beim Tracking nur noch als " +
-                        "Fallback ohne Ship24-Key. Key erstellen: console.anthropic.com",
+                        "Fallback ohne Tracktry-Key. Key erstellen: console.anthropic.com",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -85,7 +85,7 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey, dhlKey, ship24Key) }) {
+            TextButton(onClick = { onSave(anthropicKey, dhlKey, tracktryKey) }) {
                 Text("Speichern")
             }
         },
