@@ -21,6 +21,10 @@ Sendungsverlauf pro Paket.
   Sendungen mit einem Tap importieren
 - 🔔 **Hintergrund-Aktualisierung** mit Benachrichtigung bei Statuswechsel
   (stündliches Polling per WorkManager, kein Server nötig)
+- 🤖 **Claude-Integration** (optional, Anthropic-API-Key in den
+  Einstellungen): KI-Mail-Erkennung findet Sendungen in beliebigen
+  Shop-Mails, und ein Web-Suche-Fallback trackt Dienste ohne API
+  (Hermes, DPD, GLS, Auslandspakete)
 
 ### Build
 
@@ -39,8 +43,13 @@ Aktuell registriert (siehe `VersandApp.kt`):
 
 | Provider | Zweck |
 | --- | --- |
-| `DhlTrackingProvider` | Echte Daten über die **DHL Unified Tracking API** – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com), in `VersandApp.DHL_API_KEY` eintragen |
+| `DhlTrackingProvider` | Echte Daten über die **DHL Unified Tracking API** – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com), in den App-Einstellungen (Zahnrad) eintragen |
+| `ClaudeTrackingProvider` | **KI-Fallback** für Dienste ohne API: Claude (Opus) recherchiert den Status per Web-Suche. Hintergrund-Polling auf alle 6 h gedrosselt, um Kosten klein zu halten; manuelle Aktualisierung geht immer. Anthropic-Key in den Einstellungen |
 | `DemoTrackingProvider` | Fallback mit realistischen Beispieldaten, damit die App **ohne Keys sofort läuft** |
+
+Die Provider-Reihenfolge ist die Priorität: DHL-Pakete gehen über die
+DHL-API, alles andere über Claude (falls Key vorhanden), sonst Demo-Daten.
+Beide Keys werden in der App gespeichert (SharedPreferences), nicht im Code.
 
 **Wichtig zu wissen:** Es gibt keine kostenlose "eine API für alles".
 Realistische Optionen für weitere Carrier:
@@ -72,10 +81,17 @@ lizenzierte Logo-Assets vorliegen, können sie in `res/drawable` abgelegt und in
 
 Über das Mail-Symbol in der Paketliste lässt sich das Gmail-Postfach
 verknüpfen. Die App durchsucht dann Versand-Mails der letzten 60 Tage
-(bekannte Absender wie DHL, DPD, Hermes, Amazon … sowie typische Betreffe),
-extrahiert Trackingnummern per Regex, validiert sie mit dem `CarrierDetector`
-und zeigt sie als **Vorschlagsliste** – importiert wird nur, was der Nutzer
-bestätigt. Verarbeitung komplett auf dem Gerät, Scope nur `gmail.readonly`.
+(bekannte Absender wie DHL, DPD, Hermes, Amazon … sowie typische Betreffe)
+und zeigt Funde als **Vorschlagsliste** – importiert wird nur, was der
+Nutzer bestätigt. Scope nur `gmail.readonly`.
+
+Die Extraktion läuft zweistufig: Mit hinterlegtem Anthropic-Key analysiert
+**Claude Haiku** die Mails (`ClaudeMailExtractor`, strukturierter
+JSON-Output) – das findet auch Trackingnummern in unstrukturierten Mails
+beliebiger Shops und Auslandsbestellungen; ein Scan kostet unter einen
+Cent. Ohne Key (oder wenn die Claude-Abfrage fehlschlägt) übernimmt der
+lokale Regex-Parser, dann bleibt die Verarbeitung komplett auf dem Gerät.
+Hinweis: Mit Claude werden Mail-Auszüge an die Anthropic-API übertragen.
 
 ### Einmalige Einrichtung (Google Cloud Console)
 
@@ -130,8 +146,8 @@ worker/        RefreshWorker (stündliches Polling + Benachrichtigungen)
 ### Sinnvolle nächste Schritte
 
 - [ ] UPS-/FedEx-Provider (kostenlose Developer-Keys)
-- [ ] API-Keys über `local.properties`/BuildConfig statt Konstante
 - [ ] Barcode-Scanner zum Erfassen der Trackingnummer
 - [ ] Archiv für zugestellte Pakete
 - [ ] IMAP-Import für Nicht-Gmail-Postfächer
 - [ ] Automatischer periodischer Mail-Scan (aktuell manuell per Knopf)
+- [ ] Backend-Proxy für den Anthropic-Key, falls die App verteilt werden soll

@@ -7,6 +7,8 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import de.versandapp.data.db.AppDatabase
+import de.versandapp.data.settings.SettingsRepository
+import de.versandapp.data.tracking.ClaudeTrackingProvider
 import de.versandapp.data.tracking.DemoTrackingProvider
 import de.versandapp.data.tracking.DhlTrackingProvider
 import de.versandapp.data.tracking.TrackingProvider
@@ -20,26 +22,38 @@ import java.util.concurrent.TimeUnit
  */
 class VersandApp : Application() {
 
+    lateinit var settings: SettingsRepository
+        private set
+
     lateinit var repository: TrackingRepository
         private set
 
     override fun onCreate() {
         super.onCreate()
 
-        val providers = buildList<TrackingProvider> {
-            // Echte Carrier-APIs hier registrieren, sobald Keys vorhanden sind:
-            if (DHL_API_KEY.isNotBlank()) add(DhlTrackingProvider(DHL_API_KEY))
-            // Fallback, damit die App ohne Keys sofort funktioniert:
-            add(DemoTrackingProvider())
-        }
+        settings = SettingsRepository(this)
 
         repository = TrackingRepository(
             dao = AppDatabase.get(this).parcelDao(),
-            providers = providers,
+            providersFactory = ::buildProviders,
         )
 
         RefreshWorker.ensureChannel(this)
         scheduleBackgroundRefresh()
+    }
+
+    /**
+     * Provider-Kette, bei jeder Aktualisierung neu aufgebaut (Keys aus den
+     * Einstellungen wirken sofort). Reihenfolge = Priorität:
+     * 1. DHL-API (kostenlos, beste Datenqualität für DHL/Post)
+     * 2. Claude mit Web-Suche als Fallback für alle übrigen Dienste
+     * 3. Demo-Daten, damit die App ohne Keys benutzbar bleibt
+     */
+    private fun buildProviders(): List<TrackingProvider> = buildList {
+        val current = settings.current()
+        if (current.dhlApiKey.isNotBlank()) add(DhlTrackingProvider(current.dhlApiKey))
+        if (current.anthropicApiKey.isNotBlank()) add(ClaudeTrackingProvider(current.anthropicApiKey))
+        add(DemoTrackingProvider())
     }
 
     /** Stündliches Polling im Hintergrund; benachrichtigt bei Statuswechsel. */
@@ -56,14 +70,5 @@ class VersandApp : Application() {
             ExistingPeriodicWorkPolicy.KEEP,
             request,
         )
-    }
-
-    companion object {
-        /**
-         * Kostenlosen Key unter https://developer.dhl.com anlegen und hier
-         * eintragen (für Produktion besser über BuildConfig/local.properties
-         * injizieren statt im Code).
-         */
-        const val DHL_API_KEY = ""
     }
 }

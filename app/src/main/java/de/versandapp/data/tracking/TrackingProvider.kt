@@ -33,6 +33,14 @@ data class TrackingResult(
 interface TrackingProvider {
     fun supports(carrier: Carrier): Boolean
 
+    /**
+     * Mindestabstand zwischen automatischen Hintergrund-Aktualisierungen.
+     * 0 = keine Drosselung. Kostenpflichtige Provider (Claude) setzen hier
+     * ein größeres Intervall; manuelle Aktualisierung ignoriert die Drossel.
+     */
+    val minRefreshIntervalMs: Long
+        get() = 0L
+
     /** Wirft [TrackingException] bei Netz-/API-Fehlern. */
     suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult
 }

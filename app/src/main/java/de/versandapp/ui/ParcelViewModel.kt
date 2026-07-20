@@ -10,6 +10,8 @@ import de.versandapp.VersandApp
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.Parcel
 import de.versandapp.data.model.ParcelWithEvents
+import de.versandapp.data.settings.AppSettings
+import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.TrackingRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,7 @@ import kotlinx.coroutines.launch
 
 class ParcelViewModel(
     private val repository: TrackingRepository,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
 
     val parcels: StateFlow<List<ParcelWithEvents>> = repository.observeParcels()
@@ -47,7 +50,7 @@ class ParcelViewModel(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                repository.refreshAll()
+                repository.refreshAll(force = true)
             } finally {
                 _isRefreshing.value = false
             }
@@ -56,15 +59,22 @@ class ParcelViewModel(
 
     fun refresh(parcelId: Long) {
         viewModelScope.launch {
-            runCatching { repository.refresh(parcelId) }
+            runCatching { repository.refresh(parcelId, force = true) }
         }
+    }
+
+    fun currentSettings(): AppSettings = settings.current()
+
+    fun saveSettings(anthropicApiKey: String, dhlApiKey: String) {
+        settings.anthropicApiKey = anthropicApiKey
+        settings.dhlApiKey = dhlApiKey
     }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = checkNotNull(this[APPLICATION_KEY]) as VersandApp
-                ParcelViewModel(app.repository)
+                ParcelViewModel(app.repository, app.settings)
             }
         }
     }

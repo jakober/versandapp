@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +56,7 @@ fun ParcelListScreen(
     val parcels by viewModel.parcels.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -63,6 +65,9 @@ fun ParcelListScreen(
                 actions = {
                     IconButton(onClick = onImportClick) {
                         Icon(Icons.Filled.MarkEmailRead, contentDescription = "Aus Postfach importieren")
+                    }
+                    IconButton(onClick = { showSettingsDialog = true }) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Einstellungen")
                     }
                     if (isRefreshing) {
                         CircularProgressIndicator(
@@ -104,6 +109,17 @@ fun ParcelListScreen(
             onConfirm = { trackingNumber, carrier, label ->
                 viewModel.addParcel(trackingNumber, carrier, label)
                 showAddDialog = false
+            },
+        )
+    }
+
+    if (showSettingsDialog) {
+        SettingsDialog(
+            initial = viewModel.currentSettings(),
+            onDismiss = { showSettingsDialog = false },
+            onSave = { anthropicKey, dhlKey ->
+                viewModel.saveSettings(anthropicKey, dhlKey)
+                showSettingsDialog = false
             },
         )
     }

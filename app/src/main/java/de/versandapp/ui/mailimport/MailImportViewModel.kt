@@ -7,9 +7,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import de.versandapp.VersandApp
+import de.versandapp.data.mail.ClaudeMailExtractor
 import de.versandapp.data.mail.GmailService
 import de.versandapp.data.mail.ShipmentEmailParser
 import de.versandapp.data.mail.ShipmentSuggestion
+import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.TrackingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +33,9 @@ sealed interface ImportUiState {
 
 class MailImportViewModel(
     private val repository: TrackingRepository,
+    private val settings: SettingsRepository,
     private val gmail: GmailService = GmailService(),
+    private val claudeExtractor: ClaudeMailExtractor = ClaudeMailExtractor(),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ImportUiState>(ImportUiState.NotConnected)
@@ -44,13 +48,28 @@ class MailImportViewModel(
             try {
                 val mails = gmail.searchShipmentMails(accessToken)
                 val known = repository.trackedNumbers()
-                val suggestions = ShipmentEmailParser.parseAll(mails)
+                val suggestions = extractSuggestions(mails)
                     .filter { it.trackingNumber !in known }
                 _state.value = ImportUiState.Ready(suggestions.map { SuggestionItem(it) })
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "Unbekannter Fehler")
             }
         }
+    }
+
+    /**
+     * Mit hinterlegtem Anthropic-Key extrahiert Claude die Sendungen (findet
+     * auch unstrukturierte Mails und Auslandspakete); ohne Key – oder wenn die
+     * Claude-Abfrage fehlschlägt – übernimmt der lokale Regex-Parser.
+     */
+    private suspend fun extractSuggestions(
+        mails: List<de.versandapp.data.mail.MailMessage>,
+    ): List<ShipmentSuggestion> {
+        val apiKey = settings.anthropicApiKey
+        if (apiKey.isNotBlank()) {
+            runCatching { return claudeExtractor.extract(apiKey, mails) }
+        }
+        return ShipmentEmailParser.parseAll(mails)
     }
 
     fun onAuthError(e: Exception) {
@@ -92,7 +111,7 @@ class MailImportViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = checkNotNull(this[APPLICATION_KEY]) as VersandApp
-                MailImportViewModel(app.repository)
+                MailImportViewModel(app.repository, app.settings)
             }
         }
     }

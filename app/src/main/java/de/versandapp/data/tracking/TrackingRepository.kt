@@ -11,12 +11,13 @@ import kotlinx.coroutines.flow.Flow
  * Zentrale Fachlogik: verwaltet Pakete in der lokalen Datenbank und holt
  * Statusupdates über den jeweils passenden [TrackingProvider].
  *
- * [providers] wird der Reihe nach durchsucht; der erste Provider, der den
- * Carrier unterstützt, gewinnt. Der Demo-Provider steht als Fallback am Ende.
+ * [providersFactory] wird bei jeder Aktualisierung ausgewertet, damit in den
+ * Einstellungen geänderte API-Keys sofort wirken. Der erste Provider der
+ * Liste, der den Carrier unterstützt, gewinnt.
  */
 class TrackingRepository(
     private val dao: ParcelDao,
-    private val providers: List<TrackingProvider>,
+    private val providersFactory: () -> List<TrackingProvider>,
 ) {
 
     fun observeParcels(): Flow<List<ParcelWithEvents>> = dao.observeAll()
@@ -35,16 +36,29 @@ class TrackingRepository(
                 label = label?.takeIf { it.isNotBlank() },
             )
         )
-        runCatching { refresh(id) }
+        runCatching { refresh(id, force = true) }
         return id
     }
 
     suspend fun deleteParcel(parcel: Parcel) = dao.delete(parcel)
 
-    /** Holt den aktuellen Stand für ein Paket und ersetzt dessen Verlauf. */
-    suspend fun refresh(parcelId: Long) {
+    /**
+     * Holt den aktuellen Stand für ein Paket und ersetzt dessen Verlauf.
+     * Bei [force] = false respektiert die Abfrage die Drosselung des Providers
+     * (relevant für das Hintergrund-Polling kostenpflichtiger Provider).
+     */
+    suspend fun refresh(parcelId: Long, force: Boolean = false) {
         val parcel = dao.getAll().firstOrNull { it.id == parcelId } ?: return
-        val provider = providers.firstOrNull { it.supports(parcel.carrier) } ?: return
+        val provider = providersFactory().firstOrNull { it.supports(parcel.carrier) } ?: return
+
+        if (!force) {
+            val lastUpdated = parcel.lastUpdated
+            if (lastUpdated != null &&
+                System.currentTimeMillis() - lastUpdated < provider.minRefreshIntervalMs
+            ) {
+                return
+            }
+        }
 
         val result = provider.track(parcel.trackingNumber, parcel.carrier)
 
@@ -69,9 +83,9 @@ class TrackingRepository(
     }
 
     /** Aktualisiert alle Pakete; Fehler einzelner Pakete brechen den Rest nicht ab. */
-    suspend fun refreshAll() {
+    suspend fun refreshAll(force: Boolean = false) {
         dao.getAll().forEach { parcel ->
-            runCatching { refresh(parcel.id) }
+            runCatching { refresh(parcel.id, force) }
         }
     }
 
@@ -80,12 +94,12 @@ class TrackingRepository(
         dao.getAll().map { it.trackingNumber }.toSet()
 
     /**
-     * Aktualisiert alle Pakete und liefert diejenigen zurück, deren Status
-     * sich geändert hat (für Benachrichtigungen aus dem Hintergrund-Worker).
+     * Aktualisiert alle Pakete (mit Drosselung) und liefert diejenigen zurück,
+     * deren Status sich geändert hat (für Benachrichtigungen aus dem Worker).
      */
     suspend fun refreshAllAndDetectChanges(): List<Parcel> {
         val statusBefore = dao.getAll().associate { it.id to it.status }
-        refreshAll()
+        refreshAll(force = false)
         return dao.getAll().filter { parcel ->
             val before = statusBefore[parcel.id]
             before != null && before != parcel.status
