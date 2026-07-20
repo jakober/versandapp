@@ -44,8 +44,8 @@ Aktuell registriert (siehe `VersandApp.kt`):
 | Provider | Zweck |
 | --- | --- |
 | `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com) („Shipment Tracking – Unified") |
-| `SeventeenTrackProvider` | **Haupt-Quelle für alle übrigen Dienste weltweit** (inkl. China): offizielle 17track-API – kostenloser Key mit Monats-Kontingent auf [api.17track.net](https://api.17track.net) |
-| `ClaudeTrackingProvider` | **KI-Fallback** (nur aktiv, wenn kein 17track-Key hinterlegt ist): Claude Haiku ruft Tracking-Seiten ab. Automatisch 1× täglich abends, nur offene Pakete |
+| `Ship24Provider` | **Haupt-Quelle für alle übrigen Dienste weltweit** (inkl. China): Ship24-API – API schon im Gratis-Plan (10 Sendungen/Monat), Key auf [ship24.com](https://www.ship24.com) |
+| `ClaudeTrackingProvider` | **KI-Fallback** (nur aktiv, wenn kein Ship24-Key hinterlegt ist): Claude Haiku ruft Tracking-Seiten ab. Automatisch 1× täglich abends, nur offene Pakete |
 | `DemoTrackingProvider` | Fallback mit Beispieldaten, damit die App **ohne Keys sofort läuft** |
 
 Alle Keys werden in den App-Einstellungen (Zahnrad) gespeichert

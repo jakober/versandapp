@@ -26,11 +26,11 @@ import de.versandapp.data.settings.AppSettings
 fun SettingsDialog(
     initial: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (anthropicApiKey: String, dhlApiKey: String, seventeenTrackApiKey: String) -> Unit,
+    onSave: (anthropicApiKey: String, dhlApiKey: String, ship24ApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
-    var seventeenTrackKey by remember { mutableStateOf(initial.seventeenTrackApiKey) }
+    var ship24Key by remember { mutableStateOf(initial.ship24ApiKey) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -38,16 +38,16 @@ fun SettingsDialog(
         text = {
             Column {
                 OutlinedTextField(
-                    value = seventeenTrackKey,
-                    onValueChange = { seventeenTrackKey = it },
-                    label = { Text("17track API-Key") },
+                    value = ship24Key,
+                    onValueChange = { ship24Key = it },
+                    label = { Text("Ship24 API-Key") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Haupt-Tracking-Quelle für alle Dienste weltweit (inkl. China). " +
-                        "Kostenlosen Key auf api.17track.net erstellen.",
+                        "Kostenloser Key auf ship24.com (10 Sendungen/Monat gratis).",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -62,7 +62,7 @@ fun SettingsDialog(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Für die KI-Mail-Erkennung; dient beim Tracking nur noch als " +
-                        "Fallback ohne 17track-Key. Key erstellen: console.anthropic.com",
+                        "Fallback ohne Ship24-Key. Key erstellen: console.anthropic.com",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -85,7 +85,7 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey, dhlKey, seventeenTrackKey) }) {
+            TextButton(onClick = { onSave(anthropicKey, dhlKey, ship24Key) }) {
                 Text("Speichern")
             }
         },
