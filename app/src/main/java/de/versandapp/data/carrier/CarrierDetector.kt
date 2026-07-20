@@ -26,6 +26,10 @@ object CarrierDetector {
         Rule(Carrier.DHL, 40, Regex("^[0-9]{12}$")),
         // Deutsche Post / internationale S10-Nummern, z. B. RR123456789DE
         Rule(Carrier.DEUTSCHE_POST, 90, Regex("^[A-Z]{2}[0-9]{9}DE$")),
+        // China-Sendungen: S10 mit CN-Endung, Cainiao (LP…), Yanwen (YT…)
+        Rule(Carrier.CHINA_POST, 95, Regex("^[A-Z]{2}[0-9]{9}CN$")),
+        Rule(Carrier.CAINIAO, 90, Regex("^LP[0-9]{14,16}$")),
+        Rule(Carrier.YANWEN, 95, Regex("^YT[0-9]{16}$")),
         Rule(Carrier.DEUTSCHE_POST, 60, Regex("^[A-Z]{2}[0-9]{9}[A-Z]{2}$")),
         // Hermes: 14-stellig
         Rule(Carrier.HERMES, 55, Regex("^[0-9]{14}$")),

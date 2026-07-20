@@ -28,6 +28,9 @@ object ShipmentEmailParser {
         "ups" to Carrier.UPS,
         "fedex" to Carrier.FEDEX,
         "amazon" to Carrier.AMAZON,
+        "aliexpress" to Carrier.CAINIAO,
+        "cainiao" to Carrier.CAINIAO,
+        "yanwen" to Carrier.YANWEN,
     )
 
     private val candidateRegex = Regex(
@@ -36,7 +39,9 @@ object ShipmentEmailParser {
             "|TB[AC][0-9]{12,15}" +     // Amazon Logistics
             "|JJD[0-9]{16,20}" +        // DHL Express
             "|H[0-9]{19,20}" +          // Hermes
-            "|[A-Z]{2}[0-9]{9}[A-Z]{2}" + // S10 international
+            "|LP[0-9]{14,16}" +         // Cainiao/AliExpress
+            "|YT[0-9]{16}" +            // Yanwen
+            "|[A-Z]{2}[0-9]{9}[A-Z]{2}" + // S10 international (auch …CN)
             "|[0-9]{11,20}" +           // numerische Formate (DHL, DPD, GLS, …)
             ")\\b"
     )

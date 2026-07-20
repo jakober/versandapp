@@ -86,6 +86,9 @@ class ClaudeMailExtractor(
               die Lieferung trotzdem erfasst wird.
             - carrier ist der Dienstleister, der das Paket transportiert (nicht der
               Shop). Wenn unklar: OTHER.
+            - Auch China-Sendungen erfassen (AliExpress, Temu, Shein …):
+              Nummern wie LP…, YT… oder …CN gehören zu CAINIAO, YANWEN bzw.
+              CHINA_POST.
             - label ist eine kurze Beschreibung für den Nutzer, z. B. Shop und
               Artikel ("Zalando – Schuhe", "Amazon – Bürstenaufsatz-Set").
             - Dieselbe Sendung nur einmal ausgeben (mehrere Mails zur selben
@@ -108,7 +111,7 @@ class ClaudeMailExtractor(
                     "tracking_number": {"type": "string"},
                     "carrier": {
                       "type": "string",
-                      "enum": ["DHL", "DEUTSCHE_POST", "HERMES", "DPD", "GLS", "UPS", "FEDEX", "AMAZON", "OTHER"]
+                      "enum": ["DHL", "DEUTSCHE_POST", "HERMES", "DPD", "GLS", "UPS", "FEDEX", "AMAZON", "CHINA_POST", "CAINIAO", "YANWEN", "OTHER"]
                     },
                     "label": {"type": "string"}
                   },

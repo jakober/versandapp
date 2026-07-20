@@ -114,7 +114,11 @@ class ClaudeTrackingProvider(
             Du bist ein Sendungsverfolgungs-Assistent. Du erhältst einen
             Versanddienstleister und eine Trackingnummer. Recherchiere den
             aktuellen Sendungsstatus per Web-Suche (z. B. auf der Website des
-            Dienstleisters oder über Tracking-Portale).
+            Dienstleisters oder über Tracking-Portale). Bei China-Sendungen
+            (China Post, Cainiao/AliExpress, Yanwen – Nummern wie LP…, YT…
+            oder …CN) sind global.cainiao.com und 17track.net gute Quellen;
+            nach der Übergabe an einen deutschen Zusteller lohnt sich auch
+            dessen Tracking-Seite.
 
             Antworte AUSSCHLIESSLICH mit einem JSON-Objekt in genau diesem Format,
             ohne weiteren Text davor oder danach:

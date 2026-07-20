@@ -119,7 +119,8 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
         private const val SHIPMENT_QUERY =
             "newer_than:10d (" +
                 "from:(dhl OR deutschepost OR hermes OR myhermes OR dpd OR gls OR ups OR " +
-                "fedex OR amazon OR shipment OR versand OR noreply-lieferung) OR " +
+                "fedex OR amazon OR aliexpress OR temu OR shein OR cainiao OR yanwen OR " +
+                "shipment OR versand OR noreply-lieferung) OR " +
                 "subject:(Sendung OR Sendungsverfolgung OR Sendungsnummer OR Trackingnummer OR " +
                 "Zustellung OR Lieferung OR geliefert OR Paket OR versandt OR verschickt OR " +
                 "unterwegs OR tracking OR shipped OR shipping OR delivery OR parcel)" +

@@ -71,6 +71,27 @@ enum class Carrier(
         onBrandColor = 0xFFFF9900,
         trackingUrlTemplate = null,
     ),
+    CHINA_POST(
+        displayName = "China Post",
+        shortCode = "CN",
+        brandColor = 0xFF00843D,
+        onBrandColor = 0xFFFFD100,
+        trackingUrlTemplate = "https://t.17track.net/de#nums=%s",
+    ),
+    CAINIAO(
+        displayName = "Cainiao (AliExpress)",
+        shortCode = "CNI",
+        brandColor = 0xFFFF6A00,
+        onBrandColor = 0xFFFFFFFF,
+        trackingUrlTemplate = "https://global.cainiao.com/newDetail.htm?mailNoList=%s",
+    ),
+    YANWEN(
+        displayName = "Yanwen",
+        shortCode = "YW",
+        brandColor = 0xFF0057A6,
+        onBrandColor = 0xFFFFFFFF,
+        trackingUrlTemplate = "https://t.17track.net/de#nums=%s",
+    ),
     OTHER(
         displayName = "Sonstige",
         shortCode = "?",
