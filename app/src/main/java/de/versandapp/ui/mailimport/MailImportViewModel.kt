@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import de.versandapp.VersandApp
 import de.versandapp.data.mail.ShipmentMailScanner
+import de.versandapp.data.mail.ShipmentSuggestion
 import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.TrackingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
