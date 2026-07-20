@@ -119,8 +119,22 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
         return texts.joinToString("\n")
     }
 
-    private fun stripHtml(html: String): String =
-        html.replace(Regex("<[^>]+>"), " ").replace(Regex("&\\w+;"), " ")
+    /**
+     * Wandelt HTML in Text. WICHTIG: Trackingnummern stecken oft nur im Link
+     * eines Buttons (z. B. "Sendungsverfolgung" → href mit idc=/piececode=),
+     * nicht im sichtbaren Text. Deshalb werden alle URLs zuerst eingesammelt
+     * und ans Ende angehängt, damit sie beim Bereinigen nicht verloren gehen.
+     */
+    private fun stripHtml(html: String): String {
+        val urls = urlRegex.findAll(html).map { it.value }.distinct().toList()
+        val visible = html
+            .replace(Regex("(?is)<(script|style)[^>]*>.*?</\\1>"), " ")
+            .replace(Regex("<[^>]+>"), " ")
+            .replace(Regex("&\\w+;"), " ")
+        return if (urls.isEmpty()) visible else visible + "\n\nLinks:\n" + urls.joinToString("\n")
+    }
+
+    private val urlRegex = Regex("https?://[^\\s\"'<>]+")
 
     companion object {
         const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"

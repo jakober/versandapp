@@ -73,36 +73,63 @@ class ClaudeMailExtractor(
     companion object {
         private const val MODEL = "claude-sonnet-5"
         private const val MAX_MAILS = 50
-        private const val MAX_BODY_CHARS = 1500
+        private const val MAX_BODY_CHARS = 4000
 
         private val SYSTEM_PROMPT = """
-            Du extrahierst Paket-Sendungen aus E-Mails. Du erhältst mehrere Mails,
-            darunter Versandbestätigungen, Zustellbenachrichtigungen und auch
-            irrelevante Mails (Newsletter, Werbung). Erfasse ALLE Sendungen, die
-            mit einer Paketlieferung zu tun haben – lass keine Lieferung aus.
+            Du extrahierst Paket-Sendungen aus E-Mails für eine Tracking-App.
+            Du erhältst mehrere Mails (Versandbestätigungen, Zustellhinweise,
+            aber auch Newsletter/Werbung). Deine Aufgabe: JEDE echte Paket-
+            Sendung mit ihrer korrekten TRACKINGNUMMER erfassen. Verlässlichkeit
+            ist entscheidend – weder Sendungen auslassen noch falsche Nummern
+            eintragen.
 
-            Regeln:
-            - Bevorzugt echte Trackingnummern von Paketdiensten verwenden; keine
-              Rechnungs- oder Kundennummern.
-            - WICHTIG, Sonderfall Amazon: Amazon-Versandmails enthalten oft keine
-              Trackingnummer. Nutze dann die Amazon-Bestellnummer (Format
-              123-1234567-1234567) als tracking_number und carrier AMAZON, damit
-              die Lieferung trotzdem erfasst wird.
-            - carrier ist der Dienstleister, der das Paket transportiert (nicht der
-              Shop). Wenn unklar: OTHER.
-            - Auch China-Sendungen erfassen (AliExpress, Temu, Shein …):
-              Nummern wie LP…, YT… oder …CN gehören zu CAINIAO, YANWEN bzw.
-              CHINA_POST.
-            - label ist eine kurze Beschreibung für den Nutzer, z. B. Shop und
-              Artikel ("Zalando – Schuhe", "Amazon – Bürstenaufsatz-Set").
-            - status aus der Mail ableiten (wichtig bei Amazon, da online nicht
-              abrufbar): REGISTERED (angekündigt/bestellt), IN_TRANSIT (versandt/
-              unterwegs), OUT_FOR_DELIVERY (in Zustellung/in Auslieferung),
-              DELIVERED (zugestellt/geliefert). Wenn unklar, Feld weglassen.
-            - Dieselbe Sendung nur einmal ausgeben (mehrere Mails zur selben
-              Lieferung zusammenfassen); dann den aktuellsten Status verwenden.
-            - Reine Werbe-/Newsletter-Mails ignorieren. Wenn gar keine Sendungen
-              enthalten sind, gib eine leere Liste zurück.
+            SO FINDEST DU DIE RICHTIGE TRACKINGNUMMER (Priorität von oben nach unten):
+
+            1. Ein ausdrücklich als Sendungsnummer bezeichneter Wert. Achte auf
+               Bezeichnungen wie "Sendungsnummer", "Sendungsverfolgungsnummer",
+               "Trackingnummer", "Paketnummer", "tracking number", "tracking id".
+               Der direkt daneben stehende Wert ist die Trackingnummer.
+
+            2. Die Nummer aus einem Sendungsverfolgungs-Link. Unter "Links:" am
+               Ende der Mail stehen die URLs der Buttons/Links. Ziehe die
+               Trackingnummer aus dem passenden Parameter, z. B.:
+                 - DHL: ...?...idc=00340434787961604064   → 00340434787961604064
+                 - DHL: ...piececode=XXXX oder ?nummer=XXXX
+                 - Hermes/DPD/GLS/UPS/FedEx: die lange Nummer im Tracking-Link
+               Nutze IMMER die Nummer aus dem offiziellen Tracking-Link, wenn
+               vorhanden – sie ist zuverlässiger als Zahlen im Fließtext.
+
+            3. Sonderfall Amazon (nur wenn KEINE Trackingnummer vorhanden ist):
+               Amazon-Versandmails haben oft keine Trackingnummer. Nutze dann die
+               Amazon-Bestellnummer (Format 123-1234567-1234567) als
+               tracking_number mit carrier AMAZON.
+
+            NIEMALS als Trackingnummer verwenden: Bestellnummer, Auftragsnummer,
+            Rechnungsnummer, Kundennummer, Artikelnummer/SKU (z. B.
+            "71804-253-40-0"), Gutschein-/Aktionscodes. Diese stehen oft prominent
+            im Text, sind aber KEINE Trackingnummern. Im Zweifel: die Nummer aus
+            dem Tracking-Link nehmen.
+
+            CARRIER: der Dienstleister, der das Paket transportiert – nicht der
+            Shop. Leite ihn aus Absender, Text UND Nummernformat ab. Achtung: Eine
+            Mail kann von einem Dienst kommen, aber ein Paket eines anderen
+            ankündigen (z. B. Hermes-Mail über eine FedEx-Sendung). Richte dich
+            nach der Trackingnummer: beginnt sie mit "H" + Ziffern → HERMES;
+            1Z... → UPS; JJD... → DHL; LP.../YT.../...CN → CAINIAO/YANWEN/CHINA_POST.
+            Erlaubte Werte: DHL, DEUTSCHE_POST, HERMES, DPD, GLS, UPS, FEDEX,
+            AMAZON, CHINA_POST, CAINIAO, YANWEN, OTHER. Wenn unklar: OTHER.
+
+            label: kurze Beschreibung für den Nutzer aus Shop und Artikel, z. B.
+            "HUT.de – Westernhut", "Amazon – Bürstenaufsatz-Set".
+
+            status aus der Mail ableiten: REGISTERED (angekündigt/bestellt),
+            IN_TRANSIT (versandt/unterwegs/auf dem Weg), OUT_FOR_DELIVERY
+            (in Zustellung/in Auslieferung), DELIVERED (zugestellt/geliefert),
+            sonst UNKNOWN.
+
+            Mehrere Mails zur selben Sendung zu einem Eintrag zusammenfassen
+            (aktuellsten Status verwenden). Reine Werbung ohne Sendung ignorieren.
+            Enthält keine Mail eine Sendung, gib eine leere Liste zurück.
         """.trimIndent()
 
         private val OUTPUT_SCHEMA = """

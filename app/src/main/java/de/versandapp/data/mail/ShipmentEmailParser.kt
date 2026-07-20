@@ -56,6 +56,11 @@ object ShipmentEmailParser {
     /** Amazon-Bestellnummer – dient bei Amazon-Versandmails ohne Trackingnummer als Kennung. */
     private val amazonOrderRegex = Regex("\\b[0-9]{3}-[0-9]{7}-[0-9]{7}\\b")
 
+    /** Trackingnummer aus DHL-/Carrier-Tracking-Links (idc=, piececode=, nummer=, tracknum=). */
+    private val trackingLinkRegex = Regex(
+        "(?i)(?:idc|piececode|piece|nummer|tracknum|trackingnumber|tracking_number|code)=([0-9A-Z]{8,30})"
+    )
+
     /**
      * Leitet den Status aus Betreff/Text ab (Text bereits GROSSGESCHRIEBEN) –
      * v. a. für Amazon-Sendungen, die online nicht abrufbar sind. Reihenfolge
@@ -78,6 +83,28 @@ object ShipmentEmailParser {
             ?.second
         val mailStatus = statusFromText(text)
 
+        fun suggestionFor(candidate: String): ShipmentSuggestion? {
+            val detected = CarrierDetector.detect(candidate)
+            if (detected.isEmpty()) return null
+            val carrier = if (senderCarrier != null && senderCarrier in detected) {
+                senderCarrier
+            } else {
+                detected.first()
+            }
+            return ShipmentSuggestion(
+                trackingNumber = candidate,
+                carrier = carrier,
+                sourceSubject = mail.subject,
+                initialStatus = mailStatus,
+            )
+        }
+
+        // Höchste Priorität: Trackingnummern aus Tracking-Links (idc=, piececode=, …)
+        val linkNumbers = trackingLinkRegex.findAll(text)
+            .map { CarrierDetector.normalize(it.groupValues[1]) }
+            .distinct().toList()
+        val linkSuggestions = linkNumbers.mapNotNull { suggestionFor(it) }
+
         val amazonOrders = if (senderCarrier == Carrier.AMAZON) {
             amazonOrderRegex.findAll(text).map { match ->
                 ShipmentSuggestion(
@@ -91,25 +118,18 @@ object ShipmentEmailParser {
             emptyList()
         }
 
-        return amazonOrders + candidateRegex.findAll(text)
+        // Weitere Kandidaten aus dem Text; rein numerische nur, wenn kein
+        // Link-Treffer da war (sonst würden Bestell-/Kundennummern eingesammelt).
+        val textSuggestions = candidateRegex.findAll(text)
             .map { it.value }
             .distinct()
-            .mapNotNull { candidate ->
-                val detected = CarrierDetector.detect(candidate)
-                if (detected.isEmpty()) return@mapNotNull null
-                val carrier = if (senderCarrier != null && senderCarrier in detected) {
-                    senderCarrier
-                } else {
-                    detected.first()
-                }
-                ShipmentSuggestion(
-                    trackingNumber = candidate,
-                    carrier = carrier,
-                    sourceSubject = mail.subject,
-                    initialStatus = mailStatus,
-                )
-            }
+            .filter { it !in linkNumbers }
+            .filter { candidate -> candidate.first().isLetter() || linkSuggestions.isEmpty() }
+            .mapNotNull { suggestionFor(it) }
             .toList()
+
+        return (linkSuggestions + amazonOrders + textSuggestions)
+            .distinctBy { it.trackingNumber }
     }
 
     /** Parst mehrere Mails und entfernt Duplikate über alle Mails hinweg. */
