@@ -5,6 +5,7 @@ import android.content.Context
 data class AppSettings(
     val anthropicApiKey: String,
     val dhlApiKey: String,
+    val seventeenTrackApiKey: String,
 )
 
 /**
@@ -28,6 +29,11 @@ class SettingsRepository(context: Context) {
         get() = prefs.getString(KEY_DHL, "") ?: ""
         set(value) = prefs.edit().putString(KEY_DHL, value.trim()).apply()
 
+    /** Key von api.17track.net – Haupt-Tracking-Quelle für alle Dienste weltweit. */
+    var seventeenTrackApiKey: String
+        get() = prefs.getString(KEY_17TRACK, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_17TRACK, value.trim()).apply()
+
     /**
      * Merkt sich, dass der Nutzer Gmail bereits verknüpft hat – dann verbindet
      * sich die App still neu (ohne Google-Dialog) und der Hintergrund-Import
@@ -40,11 +46,13 @@ class SettingsRepository(context: Context) {
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
+        seventeenTrackApiKey = seventeenTrackApiKey,
     )
 
     private companion object {
         const val KEY_ANTHROPIC = "anthropic_api_key"
         const val KEY_DHL = "dhl_api_key"
+        const val KEY_17TRACK = "seventeen_track_api_key"
         const val KEY_GMAIL_LINKED = "gmail_linked"
     }
 }

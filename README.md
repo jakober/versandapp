@@ -43,11 +43,13 @@ Aktuell registriert (siehe `VersandApp.kt`):
 
 | Provider | Zweck |
 | --- | --- |
-| `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com), in den Einstellungen (Zahnrad) eintragen |
-| `ClaudeTrackingProvider` | **Alle übrigen Dienste per KI**: Claude (Opus) ruft die Tracking-Seiten direkt ab (Web-Fetch + Web-Suche). Automatisch nur **1× täglich abends (ab 18 Uhr)** und nur für **noch nicht zugestellte** Pakete; der ↻-Button fragt jederzeit manuell ab. Anthropic-Key in den Einstellungen |
-| `DemoTrackingProvider` | Fallback mit realistischen Beispieldaten, damit die App **ohne Keys sofort läuft** |
+| `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com) („Shipment Tracking – Unified") |
+| `SeventeenTrackProvider` | **Haupt-Quelle für alle übrigen Dienste weltweit** (inkl. China): offizielle 17track-API – kostenloser Key mit Monats-Kontingent auf [api.17track.net](https://api.17track.net) |
+| `ClaudeTrackingProvider` | **KI-Fallback** (nur aktiv, wenn kein 17track-Key hinterlegt ist): Claude Haiku ruft Tracking-Seiten ab. Automatisch 1× täglich abends, nur offene Pakete |
+| `DemoTrackingProvider` | Fallback mit Beispieldaten, damit die App **ohne Keys sofort läuft** |
 
-Beide Keys werden in der App gespeichert (SharedPreferences), nicht im Code.
+Alle Keys werden in den App-Einstellungen (Zahnrad) gespeichert
+(SharedPreferences), nicht im Code.
 
 **Wichtig zu wissen:** Es gibt keine kostenlose "eine API für alles".
 Realistische Optionen für weitere Carrier:

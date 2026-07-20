@@ -26,16 +26,32 @@ import de.versandapp.data.settings.AppSettings
 fun SettingsDialog(
     initial: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (anthropicApiKey: String, dhlApiKey: String) -> Unit,
+    onSave: (anthropicApiKey: String, dhlApiKey: String, seventeenTrackApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
+    var seventeenTrackKey by remember { mutableStateOf(initial.seventeenTrackApiKey) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Einstellungen") },
         text = {
             Column {
+                OutlinedTextField(
+                    value = seventeenTrackKey,
+                    onValueChange = { seventeenTrackKey = it },
+                    label = { Text("17track API-Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Haupt-Tracking-Quelle für alle Dienste weltweit (inkl. China). " +
+                        "Kostenlosen Key auf api.17track.net erstellen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = anthropicKey,
                     onValueChange = { anthropicKey = it },
@@ -45,10 +61,8 @@ fun SettingsDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Aktiviert die KI-Mail-Erkennung und die Online-Statusabfrage " +
-                        "per Web-Suche (automatisch 1× täglich abends für offene " +
-                        "Pakete, manuell jederzeit über ↻). " +
-                        "Key erstellen: console.anthropic.com",
+                    "Für die KI-Mail-Erkennung; dient beim Tracking nur noch als " +
+                        "Fallback ohne 17track-Key. Key erstellen: console.anthropic.com",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -71,7 +85,9 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey, dhlKey) }) { Text("Speichern") }
+            TextButton(onClick = { onSave(anthropicKey, dhlKey, seventeenTrackKey) }) {
+                Text("Speichern")
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Abbrechen") }
