@@ -4,6 +4,7 @@ import android.content.Context
 
 data class AppSettings(
     val anthropicApiKey: String,
+    val dhlApiKey: String,
 )
 
 /**
@@ -22,6 +23,11 @@ class SettingsRepository(context: Context) {
         get() = prefs.getString(KEY_ANTHROPIC, "") ?: ""
         set(value) = prefs.edit().putString(KEY_ANTHROPIC, value.trim()).apply()
 
+    /** Kostenloser Key von developer.dhl.com – nur für DHL-/Post-Sendungen. */
+    var dhlApiKey: String
+        get() = prefs.getString(KEY_DHL, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_DHL, value.trim()).apply()
+
     /**
      * Merkt sich, dass der Nutzer Gmail bereits verknüpft hat – dann verbindet
      * sich die App still neu (ohne Google-Dialog) und der Hintergrund-Import
@@ -33,10 +39,12 @@ class SettingsRepository(context: Context) {
 
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
+        dhlApiKey = dhlApiKey,
     )
 
     private companion object {
         const val KEY_ANTHROPIC = "anthropic_api_key"
+        const val KEY_DHL = "dhl_api_key"
         const val KEY_GMAIL_LINKED = "gmail_linked"
     }
 }

@@ -144,8 +144,8 @@ fun ParcelListScreen(
         SettingsDialog(
             initial = viewModel.currentSettings(),
             onDismiss = { showSettingsDialog = false },
-            onSave = { anthropicKey ->
-                viewModel.saveSettings(anthropicKey)
+            onSave = { anthropicKey, dhlKey ->
+                viewModel.saveSettings(anthropicKey, dhlKey)
                 showSettingsDialog = false
             },
         )

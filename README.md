@@ -43,13 +43,11 @@ Aktuell registriert (siehe `VersandApp.kt`):
 
 | Provider | Zweck |
 | --- | --- |
-| `ClaudeTrackingProvider` | **Alle Dienste einheitlich per KI**: Claude (Opus) recherchiert den Status per Web-Suche – bewusst ohne einzelne Carrier-APIs. Automatisch läuft das nur **1× täglich abends (ab 18 Uhr)** und nur für **noch nicht zugestellte** Pakete – so bleiben die Kosten minimal. Der ↻-Button in der App fragt jederzeit manuell ab. Anthropic-Key in den Einstellungen (Zahnrad) |
-| `DemoTrackingProvider` | Fallback mit realistischen Beispieldaten, damit die App **ohne Key sofort läuft** |
+| `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com), in den Einstellungen (Zahnrad) eintragen |
+| `ClaudeTrackingProvider` | **Alle übrigen Dienste per KI**: Claude (Opus) ruft die Tracking-Seiten direkt ab (Web-Fetch + Web-Suche). Automatisch nur **1× täglich abends (ab 18 Uhr)** und nur für **noch nicht zugestellte** Pakete; der ↻-Button fragt jederzeit manuell ab. Anthropic-Key in den Einstellungen |
+| `DemoTrackingProvider` | Fallback mit realistischen Beispieldaten, damit die App **ohne Keys sofort läuft** |
 
-Der Key wird in der App gespeichert (SharedPreferences), nicht im Code.
-Wer später doch direkte Carrier-APIs (DHL, UPS, FedEx – teils kostenlos)
-ergänzen will: einfach einen weiteren `TrackingProvider` implementieren und
-vor dem Claude-Provider registrieren.
+Beide Keys werden in der App gespeichert (SharedPreferences), nicht im Code.
 
 **Wichtig zu wissen:** Es gibt keine kostenlose "eine API für alles".
 Realistische Optionen für weitere Carrier:

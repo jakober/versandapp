@@ -26,9 +26,10 @@ import de.versandapp.data.settings.AppSettings
 fun SettingsDialog(
     initial: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (anthropicApiKey: String) -> Unit,
+    onSave: (anthropicApiKey: String, dhlApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
+    var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -45,16 +46,32 @@ fun SettingsDialog(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Aktiviert die KI-Mail-Erkennung und die Online-Statusabfrage " +
-                        "aller Sendungen per Web-Suche (automatisch 1× täglich abends " +
-                        "für offene Pakete, manuell jederzeit über ↻). " +
+                        "per Web-Suche (automatisch 1× täglich abends für offene " +
+                        "Pakete, manuell jederzeit über ↻). " +
                         "Key erstellen: console.anthropic.com",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = dhlKey,
+                    onValueChange = { dhlKey = it },
+                    label = { Text("DHL API-Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Kostenloser Key von developer.dhl.com – DHL-/Post-Sendungen " +
+                        "werden damit zuverlässig über die offizielle API geprüft, " +
+                        "alle anderen Dienste weiterhin über die Online-Suche.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey) }) { Text("Speichern") }
+            TextButton(onClick = { onSave(anthropicKey, dhlKey) }) { Text("Speichern") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Abbrechen") }
