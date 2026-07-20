@@ -13,8 +13,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * Regex-Parser auch Trackingnummern in unstrukturierten Mails beliebiger
  * Shops (inkl. Auslandsbestellungen).
  *
- * Nutzt Claude Haiku (schnell und günstig – ein Scan von ~25 Mails kostet
- * unter einen Cent) mit strukturiertem JSON-Output.
+ * Nutzt Claude Sonnet mit strukturiertem JSON-Output – das stärkere Modell
+ * erkennt auch schwierige Mails zuverlässig; ein Scan kostet wenige Cent.
  */
 class ClaudeMailExtractor(
     private val api: ClaudeApi = ClaudeApi(),
@@ -67,7 +67,7 @@ class ClaudeMailExtractor(
     }
 
     companion object {
-        private const val MODEL = "claude-haiku-4-5"
+        private const val MODEL = "claude-sonnet-5"
         private const val MAX_MAILS = 50
         private const val MAX_BODY_CHARS = 1500
 

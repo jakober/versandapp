@@ -66,6 +66,9 @@ class ClaudeTrackingProvider(
      * direkt per Web-Abruf öffnen, statt nur zu suchen.
      */
     private fun buildUserText(trackingNumber: String, carrier: Carrier): String {
+        // Bewusst keine 17track-Links: dort steht die Nummer im URL-Fragment
+        // (nach #), das nie an den Server geht – ein Abruf liefert nur die
+        // leere App-Hülle ohne Statusdaten.
         val urls = buildList {
             carrier.trackingUrl(trackingNumber)?.let { add(it) }
             if (carrier == Carrier.DHL || carrier == Carrier.DEUTSCHE_POST) {
@@ -74,7 +77,6 @@ class ClaudeTrackingProvider(
                         "?piececode=$trackingNumber&language=de&noRedirect=true"
                 )
             }
-            add("https://t.17track.net/de#nums=$trackingNumber")
         }
         return buildString {
             appendLine("Dienstleister: ${carrier.displayName}")
@@ -133,7 +135,9 @@ class ClaudeTrackingProvider(
     }
 
     companion object {
-        private const val MODEL = "claude-opus-4-8"
+        // Schnellstes/günstigstes Modell – fürs Auslesen von Tracking-Seiten
+        // ausreichend; die Web-Tools nutzen die zu Haiku passenden Varianten.
+        private const val MODEL = "claude-haiku-4-5"
 
         private val SYSTEM_PROMPT = """
             Du bist ein Sendungsverfolgungs-Assistent. Du erhältst einen
@@ -171,8 +175,8 @@ class ClaudeTrackingProvider(
 
         private val WEB_SEARCH_TOOLS = """
         [
-          {"type": "web_search_20260209", "name": "web_search", "max_uses": 4},
-          {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 4}
+          {"type": "web_search_20250305", "name": "web_search", "max_uses": 4},
+          {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 4}
         ]
         """.trimIndent()
     }
