@@ -17,6 +17,10 @@ Sendungsverlauf pro Paket.
 - 🔗 Absprung zur offiziellen Tracking-Seite des Anbieters
 - 💾 Lokale Speicherung (Room) – funktioniert offline
 - 🎨 Material You / Dynamic Color, heller und dunkler Modus
+- 📧 **Gmail-Import** (Schritt 2): Postfach verknüpfen und gefundene
+  Sendungen mit einem Tap importieren
+- 🔔 **Hintergrund-Aktualisierung** mit Benachrichtigung bei Statuswechsel
+  (stündliches Polling per WorkManager, kein Server nötig)
 
 ### Build
 
@@ -64,43 +68,70 @@ Markenfarben mit Kürzel (DHL-Gelb, DPD-Rot, UPS-Braun/Gold …). Sobald
 lizenzierte Logo-Assets vorliegen, können sie in `res/drawable` abgelegt und in
 `CarrierBadge.kt` gerendert werden.
 
-## Schritt 2 (geplant): Postfach-Anbindung
+## Schritt 2: Postfach-Anbindung (Gmail)
 
-Ziel: E-Mail-Konto verknüpfen, Versandbestätigungen automatisch erkennen und
-Pakete ohne manuelles Eintippen importieren.
+Über das Mail-Symbol in der Paketliste lässt sich das Gmail-Postfach
+verknüpfen. Die App durchsucht dann Versand-Mails der letzten 60 Tage
+(bekannte Absender wie DHL, DPD, Hermes, Amazon … sowie typische Betreffe),
+extrahiert Trackingnummern per Regex, validiert sie mit dem `CarrierDetector`
+und zeigt sie als **Vorschlagsliste** – importiert wird nur, was der Nutzer
+bestätigt. Verarbeitung komplett auf dem Gerät, Scope nur `gmail.readonly`.
 
-Grober Plan:
+### Einmalige Einrichtung (Google Cloud Console)
 
-1. **Gmail zuerst** – OAuth-Login mit der Gmail API und dem minimalen Scope
-   `gmail.readonly`; Suche nach Mails von bekannten Absendern
-   (`noreply@dhl.de`, `versandbestaetigung@amazon.de` …)
-2. **Parser pro Absender**: Trackingnummern per Regex aus Betreff/Body ziehen –
-   der vorhandene `CarrierDetector` validiert und ordnet sie direkt einem
-   Carrier zu
-3. Treffer als Vorschlagsliste anzeigen ("3 neue Sendungen gefunden –
-   importieren?"), nicht stillschweigend importieren
-4. Später IMAP für andere Anbieter (GMX, web.de, Posteo …)
-5. Datenschutz: Verarbeitung vollständig auf dem Gerät, keine Mail-Inhalte an
-   Server; Achtung: Googles Verifizierung für sensible Scopes einplanen, wenn
-   die App in den Play Store soll
+Damit der Gmail-Login funktioniert, braucht die App einen OAuth-Client:
+
+1. Projekt auf [console.cloud.google.com](https://console.cloud.google.com)
+   anlegen und die **Gmail API** aktivieren
+2. OAuth-Zustimmungsbildschirm konfigurieren (Testnutzer: eigene
+   Gmail-Adresse eintragen)
+3. OAuth-Client-ID vom Typ **Android** anlegen mit Paketname `de.versandapp`
+   und dem **SHA-1** des Debug-Keystores
+   (`./gradlew signingReport` zeigt ihn an)
+4. Fertig – kein API-Key im Code nötig, die Zuordnung läuft über
+   Paketname + SHA-1
+
+Für eine Play-Store-Veröffentlichung verlangt Google eine Verifizierung der
+App, da `gmail.readonly` ein sensibler Scope ist. Für den Eigenbedarf
+(Testnutzer) reicht das Setup oben.
+
+Später denkbar: IMAP-Anbindung für andere Anbieter (GMX, web.de, Posteo …).
+
+## Statusabfrage & Benachrichtigungen ohne Bezahl-APIs
+
+**Kurzfassung:** "Nur aktueller Stand statt Verlauf" macht die Datenbeschaffung
+leider nicht kostenlos – die Hürde ist der API-Zugang an sich, nicht die
+Datentiefe. Kostenlos und offiziell gehen DHL, UPS und FedEx (jeweils mit
+Verlauf). Für DPD/GLS/Hermes gibt es keine offiziellen Gratis-APIs für
+Privatnutzer; deren Web-Endpoints anzuzapfen wäre technisch möglich, ist aber
+AGB-Grauzone und bricht ständig – deshalb nicht eingebaut.
+
+**Benachrichtigungen** gehen dagegen komplett ohne Server und ohne Kosten:
+Die App pollt per WorkManager stündlich im Hintergrund (Android erlaubt
+minimal 15 Minuten, Intervall in `VersandApp.scheduleBackgroundRefresh()`)
+und zeigt eine lokale Benachrichtigung, sobald sich ein Paketstatus ändert –
+fühlt sich für den Nutzer wie Push an. Echtes Instant-Push (FCM) bräuchte ein
+Backend, das zentral pollt, oder die (kostenpflichtigen) Webhooks eines
+Aggregators.
 
 ## Architektur
 
 ```
-ui/            Compose-Screens (Liste, Detail, Hinzufügen-Dialog) + ViewModel
+ui/            Compose-Screens (Liste, Detail, Hinzufügen, Mail-Import) + ViewModels
 data/model/    Parcel, TrackingEvent, Carrier, ParcelStatus
 data/db/       Room-Datenbank + DAO
 data/carrier/  CarrierDetector (Format-Erkennung der Trackingnummern)
 data/tracking/ TrackingProvider-Abstraktion, DHL-Anbindung, Demo-Provider,
                TrackingRepository (Fachlogik)
+data/mail/     GmailService (Gmail REST API) + ShipmentEmailParser
+worker/        RefreshWorker (stündliches Polling + Benachrichtigungen)
 ```
 
 ### Sinnvolle nächste Schritte
 
-- [ ] Hintergrund-Aktualisierung per WorkManager + Push-Benachrichtigung bei
-      Statuswechsel ("Dein Paket ist in Zustellung!")
 - [ ] UPS-/FedEx-Provider (kostenlose Developer-Keys)
 - [ ] API-Keys über `local.properties`/BuildConfig statt Konstante
 - [ ] Barcode-Scanner zum Erfassen der Trackingnummer
 - [ ] Archiv für zugestellte Pakete
-- [ ] Schritt 2: Gmail-Import (siehe oben)
+- [ ] IMAP-Import für Nicht-Gmail-Postfächer
+- [ ] Automatischer periodischer Mail-Scan (aktuell manuell per Knopf)

@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,6 +50,7 @@ import java.util.Date
 fun ParcelListScreen(
     viewModel: ParcelViewModel,
     onParcelClick: (Long) -> Unit,
+    onImportClick: () -> Unit,
 ) {
     val parcels by viewModel.parcels.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -59,6 +61,9 @@ fun ParcelListScreen(
             TopAppBar(
                 title = { Text("Meine Pakete") },
                 actions = {
+                    IconButton(onClick = onImportClick) {
+                        Icon(Icons.Filled.MarkEmailRead, contentDescription = "Aus Postfach importieren")
+                    }
                     if (isRefreshing) {
                         CircularProgressIndicator(
                             modifier = Modifier.padding(end = 16.dp).width(24.dp).height(24.dp),

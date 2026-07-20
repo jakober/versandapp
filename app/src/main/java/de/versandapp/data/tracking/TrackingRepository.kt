@@ -74,4 +74,21 @@ class TrackingRepository(
             runCatching { refresh(parcel.id) }
         }
     }
+
+    /** Bereits verfolgte Trackingnummern – für die Duplikat-Erkennung beim Mail-Import. */
+    suspend fun trackedNumbers(): Set<String> =
+        dao.getAll().map { it.trackingNumber }.toSet()
+
+    /**
+     * Aktualisiert alle Pakete und liefert diejenigen zurück, deren Status
+     * sich geändert hat (für Benachrichtigungen aus dem Hintergrund-Worker).
+     */
+    suspend fun refreshAllAndDetectChanges(): List<Parcel> {
+        val statusBefore = dao.getAll().associate { it.id to it.status }
+        refreshAll()
+        return dao.getAll().filter { parcel ->
+            val before = statusBefore[parcel.id]
+            before != null && before != parcel.status
+        }
+    }
 }
