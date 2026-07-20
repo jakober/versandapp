@@ -30,7 +30,7 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun searchShipmentMails(accessToken: String, maxResults: Int = 25): List<MailMessage> =
+    suspend fun searchShipmentMails(accessToken: String, maxResults: Int = 50): List<MailMessage> =
         withContext(Dispatchers.IO) {
             listMessageIds(accessToken, SHIPMENT_QUERY, maxResults).mapNotNull { id ->
                 runCatching { getMessage(accessToken, id) }.getOrNull()
@@ -111,11 +111,18 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
     companion object {
         const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
 
-        /** Versand-Mails der letzten 60 Tage von bekannten Absendern oder mit typischem Betreff. */
+        /**
+         * Bewusst breites Netz über die letzten 10 Tage: alle bekannten
+         * Versand-Absender plus alle Betreffe rund um Lieferung/Zustellung.
+         * Falsch-Treffer (Newsletter etc.) sortiert die KI-Auswertung aus.
+         */
         private const val SHIPMENT_QUERY =
-            "newer_than:60d (from:(dhl.de OR dhl.com OR deutschepost.de OR myhermes.de OR " +
-                "hermesworld.com OR dpd.de OR gls-group.eu OR gls-germany.com OR ups.com OR " +
-                "fedex.com OR amazon.de) OR subject:(Sendungsverfolgung OR Sendungsnummer OR " +
-                "Trackingnummer OR \"tracking number\" OR versandt OR shipped))"
+            "newer_than:10d (" +
+                "from:(dhl OR deutschepost OR hermes OR myhermes OR dpd OR gls OR ups OR " +
+                "fedex OR amazon OR shipment OR versand OR noreply-lieferung) OR " +
+                "subject:(Sendung OR Sendungsverfolgung OR Sendungsnummer OR Trackingnummer OR " +
+                "Zustellung OR Lieferung OR geliefert OR Paket OR versandt OR verschickt OR " +
+                "unterwegs OR tracking OR shipped OR shipping OR delivery OR parcel)" +
+                ")"
     }
 }

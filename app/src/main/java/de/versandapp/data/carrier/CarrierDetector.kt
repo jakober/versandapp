@@ -16,8 +16,9 @@ object CarrierDetector {
     private val rules = listOf(
         // UPS: eindeutiges "1Z"-Präfix
         Rule(Carrier.UPS, 100, Regex("^1Z[0-9A-Z]{16}$")),
-        // Amazon Logistics
+        // Amazon Logistics (Trackingnummer oder Bestellnummer)
         Rule(Carrier.AMAZON, 100, Regex("^TB[AC][0-9]{12,15}$")),
+        Rule(Carrier.AMAZON, 95, Regex("^[0-9]{3}-[0-9]{7}-[0-9]{7}$")),
         // DHL Paket (DE): 20-stellig, meist mit 00340434 beginnend
         Rule(Carrier.DHL, 95, Regex("^00340434[0-9]{12}$")),
         Rule(Carrier.DHL, 70, Regex("^[0-9]{20}$")),

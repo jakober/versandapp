@@ -130,6 +130,9 @@ class ClaudeTrackingProvider(
             - events chronologisch aufsteigend, nur Ereignisse aus den Suchergebnissen.
             - Erfinde NIEMALS Statusdaten. Wenn du keine verlässlichen Informationen
               zu genau dieser Trackingnummer findest, antworte mit {"found": false}.
+            - Amazon-Bestellnummern (Format 123-1234567-1234567) sind nicht
+              öffentlich einsehbar – antworte dann sofort mit {"found": false},
+              ohne Web-Suche.
         """.trimIndent()
 
         private val WEB_SEARCH_TOOLS = """

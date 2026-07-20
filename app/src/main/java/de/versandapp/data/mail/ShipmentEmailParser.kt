@@ -41,13 +41,28 @@ object ShipmentEmailParser {
             ")\\b"
     )
 
+    /** Amazon-Bestellnummer – dient bei Amazon-Versandmails ohne Trackingnummer als Kennung. */
+    private val amazonOrderRegex = Regex("\\b[0-9]{3}-[0-9]{7}-[0-9]{7}\\b")
+
     fun parse(mail: MailMessage): List<ShipmentSuggestion> {
         val text = (mail.subject + "\n" + mail.body).uppercase()
         val senderCarrier = senderToCarrier
             .firstOrNull { (key, _) -> mail.from.contains(key, ignoreCase = true) }
             ?.second
 
-        return candidateRegex.findAll(text)
+        val amazonOrders = if (senderCarrier == Carrier.AMAZON) {
+            amazonOrderRegex.findAll(text).map { match ->
+                ShipmentSuggestion(
+                    trackingNumber = match.value,
+                    carrier = Carrier.AMAZON,
+                    sourceSubject = mail.subject,
+                )
+            }.toList()
+        } else {
+            emptyList()
+        }
+
+        return amazonOrders + candidateRegex.findAll(text)
             .map { it.value }
             .distinct()
             .mapNotNull { candidate ->

@@ -68,23 +68,30 @@ class ClaudeMailExtractor(
 
     companion object {
         private const val MODEL = "claude-haiku-4-5"
-        private const val MAX_MAILS = 20
+        private const val MAX_MAILS = 50
         private const val MAX_BODY_CHARS = 1500
 
         private val SYSTEM_PROMPT = """
-            Du extrahierst Paket-Sendungen aus E-Mails. Du erhältst mehrere
-            Versand- und Bestellbestätigungs-Mails. Finde alle Paket-Trackingnummern
-            mit dem zugehörigen Versanddienstleister.
+            Du extrahierst Paket-Sendungen aus E-Mails. Du erhältst mehrere Mails,
+            darunter Versandbestätigungen, Zustellbenachrichtigungen und auch
+            irrelevante Mails (Newsletter, Werbung). Erfasse ALLE Sendungen, die
+            mit einer Paketlieferung zu tun haben – lass keine Lieferung aus.
 
             Regeln:
-            - Nur echte Trackingnummern von Paketdiensten, keine Bestell- oder
-              Rechnungsnummern.
+            - Bevorzugt echte Trackingnummern von Paketdiensten verwenden; keine
+              Rechnungs- oder Kundennummern.
+            - WICHTIG, Sonderfall Amazon: Amazon-Versandmails enthalten oft keine
+              Trackingnummer. Nutze dann die Amazon-Bestellnummer (Format
+              123-1234567-1234567) als tracking_number und carrier AMAZON, damit
+              die Lieferung trotzdem erfasst wird.
             - carrier ist der Dienstleister, der das Paket transportiert (nicht der
               Shop). Wenn unklar: OTHER.
             - label ist eine kurze Beschreibung für den Nutzer, z. B. Shop und
-              Artikel ("Zalando – Schuhe").
-            - Dieselbe Trackingnummer nur einmal ausgeben.
-            - Wenn keine Sendungen enthalten sind, gib eine leere Liste zurück.
+              Artikel ("Zalando – Schuhe", "Amazon – Bürstenaufsatz-Set").
+            - Dieselbe Sendung nur einmal ausgeben (mehrere Mails zur selben
+              Lieferung zusammenfassen).
+            - Reine Werbe-/Newsletter-Mails ignorieren. Wenn gar keine Sendungen
+              enthalten sind, gib eine leere Liste zurück.
         """.trimIndent()
 
         private val OUTPUT_SCHEMA = """
