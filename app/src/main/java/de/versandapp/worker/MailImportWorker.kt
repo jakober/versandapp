@@ -50,8 +50,11 @@ class MailImportWorker(
         val token = authResult.accessToken ?: return Result.success()
 
         val imported = try {
-            val suggestions = ShipmentMailScanner()
-                .scan(token, app.settings.anthropicApiKey)
+            val suggestions = ShipmentMailScanner().scan(
+                gmailAccessToken = token,
+                anthropicApiKey = app.settings.anthropicApiKey,
+                afterEpochSeconds = app.settings.lastMailImportEpochSeconds,
+            )
             val known = app.repository.trackedNumbers()
             suggestions
                 .filter { it.trackingNumber !in known }
@@ -60,12 +63,16 @@ class MailImportWorker(
                         trackingNumber = suggestion.trackingNumber,
                         carrier = suggestion.carrier,
                         label = suggestion.sourceSubject.takeIf { it.isNotBlank() },
+                        initialStatus = suggestion.initialStatus,
                     )
                 }
                 .size
         } catch (_: Exception) {
             return Result.retry()
         }
+
+        // Ab jetzt nur noch Mails ab diesem Zeitpunkt berücksichtigen
+        app.settings.lastMailImportEpochSeconds = System.currentTimeMillis() / 1000
 
         if (imported > 0) notifyImported(imported)
         return Result.success()

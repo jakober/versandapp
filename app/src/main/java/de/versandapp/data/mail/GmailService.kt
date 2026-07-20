@@ -30,9 +30,23 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun searchShipmentMails(accessToken: String, maxResults: Int = 50): List<MailMessage> =
+    /**
+     * @param afterEpochSeconds Nur Mails ab diesem Zeitpunkt (Unix-Sekunden);
+     *   0 = die letzten 24 Stunden.
+     */
+    suspend fun searchShipmentMails(
+        accessToken: String,
+        afterEpochSeconds: Long = 0L,
+        maxResults: Int = 50,
+    ): List<MailMessage> =
         withContext(Dispatchers.IO) {
-            listMessageIds(accessToken, SHIPMENT_QUERY, maxResults).mapNotNull { id ->
+            val timeFilter = if (afterEpochSeconds > 0L) {
+                "after:$afterEpochSeconds"
+            } else {
+                "newer_than:1d"
+            }
+            val query = "$timeFilter $SHIPMENT_QUERY"
+            listMessageIds(accessToken, query, maxResults).mapNotNull { id ->
                 runCatching { getMessage(accessToken, id) }.getOrNull()
             }
         }
@@ -112,12 +126,13 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
         const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
 
         /**
-         * Bewusst breites Netz über die letzten 10 Tage: alle bekannten
-         * Versand-Absender plus alle Betreffe rund um Lieferung/Zustellung.
-         * Falsch-Treffer (Newsletter etc.) sortiert die KI-Auswertung aus.
+         * Bewusst breites Netz: alle bekannten Versand-Absender plus alle
+         * Betreffe rund um Lieferung/Zustellung. Das Zeitfenster wird davor
+         * gesetzt (24 h bzw. seit letztem Import). Falsch-Treffer (Newsletter
+         * etc.) sortiert die KI-Auswertung aus.
          */
         private const val SHIPMENT_QUERY =
-            "newer_than:10d (" +
+            "(" +
                 "from:(dhl OR deutschepost OR hermes OR myhermes OR dpd OR gls OR ups OR " +
                 "fedex OR amazon OR aliexpress OR temu OR shein OR cainiao OR yanwen OR " +
                 "shipment OR versand OR noreply-lieferung) OR " +

@@ -2,11 +2,18 @@ package de.versandapp.data.mail
 
 import de.versandapp.data.carrier.CarrierDetector
 import de.versandapp.data.model.Carrier
+import de.versandapp.data.model.ParcelStatus
 
 data class ShipmentSuggestion(
     val trackingNumber: String,
     val carrier: Carrier,
     val sourceSubject: String,
+    /**
+     * Aus der Mail abgeleiteter Status – v. a. für Amazon-Sendungen, deren
+     * Bestellnummer nicht online abrufbar ist, deren Zustellstatus aber in
+     * der Mail steht ("in Zustellung", "zugestellt" …). null = unbekannt.
+     */
+    val initialStatus: ParcelStatus? = null,
 )
 
 /**
@@ -49,11 +56,27 @@ object ShipmentEmailParser {
     /** Amazon-Bestellnummer – dient bei Amazon-Versandmails ohne Trackingnummer als Kennung. */
     private val amazonOrderRegex = Regex("\\b[0-9]{3}-[0-9]{7}-[0-9]{7}\\b")
 
+    /**
+     * Leitet den Status aus Betreff/Text ab (Text bereits GROSSGESCHRIEBEN) –
+     * v. a. für Amazon-Sendungen, die online nicht abrufbar sind. Reihenfolge
+     * = Priorität, damit "zugestellt" nicht von "in Zustellung" überschrieben wird.
+     */
+    private fun statusFromText(text: String): ParcelStatus? = when {
+        listOf("ZUGESTELLT", "GELIEFERT", "AUSGELIEFERT", "DELIVERED", "WURDE GELIEFERT")
+            .any { text.contains(it) } -> ParcelStatus.DELIVERED
+        listOf("IN ZUSTELLUNG", "IN AUSLIEFERUNG", "WIRD HEUTE ZUGESTELLT", "OUT FOR DELIVERY")
+            .any { text.contains(it) } -> ParcelStatus.OUT_FOR_DELIVERY
+        listOf("VERSANDT", "VERSCHICKT", "UNTERWEGS", "SHIPPED", "IN TRANSIT")
+            .any { text.contains(it) } -> ParcelStatus.IN_TRANSIT
+        else -> null
+    }
+
     fun parse(mail: MailMessage): List<ShipmentSuggestion> {
         val text = (mail.subject + "\n" + mail.body).uppercase()
         val senderCarrier = senderToCarrier
             .firstOrNull { (key, _) -> mail.from.contains(key, ignoreCase = true) }
             ?.second
+        val mailStatus = statusFromText(text)
 
         val amazonOrders = if (senderCarrier == Carrier.AMAZON) {
             amazonOrderRegex.findAll(text).map { match ->
@@ -61,6 +84,7 @@ object ShipmentEmailParser {
                     trackingNumber = match.value,
                     carrier = Carrier.AMAZON,
                     sourceSubject = mail.subject,
+                    initialStatus = mailStatus,
                 )
             }.toList()
         } else {
@@ -82,6 +106,7 @@ object ShipmentEmailParser {
                     trackingNumber = candidate,
                     carrier = carrier,
                     sourceSubject = mail.subject,
+                    initialStatus = mailStatus,
                 )
             }
             .toList()

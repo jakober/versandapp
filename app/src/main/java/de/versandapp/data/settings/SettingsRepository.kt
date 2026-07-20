@@ -43,6 +43,14 @@ class SettingsRepository(context: Context) {
         get() = prefs.getBoolean(KEY_GMAIL_LINKED, false)
         set(value) = prefs.edit().putBoolean(KEY_GMAIL_LINKED, value).apply()
 
+    /**
+     * Unix-Sekunden des letzten Mail-Imports. 0 = noch nie importiert – dann
+     * werden die letzten 24 h durchsucht, danach nur Mails seit diesem Zeitpunkt.
+     */
+    var lastMailImportEpochSeconds: Long
+        get() = prefs.getLong(KEY_LAST_MAIL_IMPORT, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_MAIL_IMPORT, value).apply()
+
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
@@ -54,5 +62,6 @@ class SettingsRepository(context: Context) {
         const val KEY_DHL = "dhl_api_key"
         const val KEY_SHIP24 = "ship24_api_key"
         const val KEY_GMAIL_LINKED = "gmail_linked"
+        const val KEY_LAST_MAIL_IMPORT = "last_mail_import_epoch"
     }
 }

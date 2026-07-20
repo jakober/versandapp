@@ -26,14 +26,26 @@ sealed interface RefreshOutcome {
 class TrackingRepository(
     private val dao: ParcelDao,
     private val providersFactory: () -> List<TrackingProvider>,
+    /** Übersetzt Verlaufstexte ins Deutsche; Fallback = Originaltexte. */
+    private val translate: suspend (List<String>) -> List<String> = { it },
 ) {
 
     fun observeParcels(): Flow<List<ParcelWithEvents>> = dao.observeAll()
 
     fun observeParcel(id: Long): Flow<ParcelWithEvents?> = dao.observeById(id)
 
-    /** Legt ein Paket an und lädt direkt den ersten Status. Gibt die neue ID zurück. */
-    suspend fun addParcel(trackingNumber: String, carrier: Carrier, label: String?): Long {
+    /**
+     * Legt ein Paket an und lädt direkt den ersten Status. [initialStatus]
+     * setzt einen aus der Mail abgeleiteten Status (z. B. Amazon), der
+     * erhalten bleibt, wenn kein Online-Provider Daten liefert.
+     * Gibt die neue ID zurück.
+     */
+    suspend fun addParcel(
+        trackingNumber: String,
+        carrier: Carrier,
+        label: String?,
+        initialStatus: ParcelStatus? = null,
+    ): Long {
         val existing = dao.findByTrackingNumber(trackingNumber)
         if (existing != null) return existing.id
 
@@ -42,6 +54,7 @@ class TrackingRepository(
                 trackingNumber = trackingNumber,
                 carrier = carrier,
                 label = label?.takeIf { it.isNotBlank() },
+                status = initialStatus ?: ParcelStatus.UNKNOWN,
             )
         )
         refresh(id, force = true)
@@ -84,15 +97,20 @@ class TrackingRepository(
             return RefreshOutcome.Failed(e.message ?: "Unbekannter Fehler")
         }
 
+        // Verlaufstexte vorab ins Deutsche übersetzen (ein kurzer Aufruf für alle)
+        val germanDescriptions = runCatching {
+            translate(result.events.map { it.description })
+        }.getOrDefault(result.events.map { it.description })
+
         dao.replaceEvents(
             parcelId = parcel.id,
-            events = result.events.map {
+            events = result.events.mapIndexed { index, update ->
                 TrackingEvent(
                     parcelId = parcel.id,
-                    timestamp = it.timestamp,
-                    description = it.description,
-                    location = it.location,
-                    status = it.status,
+                    timestamp = update.timestamp,
+                    description = germanDescriptions.getOrElse(index) { update.description },
+                    location = update.location,
+                    status = update.status,
                 )
             },
         )

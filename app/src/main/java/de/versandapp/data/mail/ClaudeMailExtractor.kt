@@ -3,6 +3,7 @@ package de.versandapp.data.mail
 import de.versandapp.data.ai.ClaudeApi
 import de.versandapp.data.carrier.CarrierDetector
 import de.versandapp.data.model.Carrier
+import de.versandapp.data.model.ParcelStatus
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -57,10 +58,13 @@ class ClaudeMailExtractor(
                 val carrier = shipment["carrier"]?.jsonPrimitive?.content
                     ?.let { name -> Carrier.entries.firstOrNull { it.name == name } }
                     ?: Carrier.OTHER
+                val status = shipment["status"]?.jsonPrimitive?.content
+                    ?.let { name -> ParcelStatus.entries.firstOrNull { it.name == name } }
                 ShipmentSuggestion(
                     trackingNumber = trackingNumber,
                     carrier = carrier,
                     sourceSubject = shipment["label"]?.jsonPrimitive?.content ?: "",
+                    initialStatus = status,
                 )
             }
             .distinctBy { it.trackingNumber }
@@ -91,8 +95,12 @@ class ClaudeMailExtractor(
               CHINA_POST.
             - label ist eine kurze Beschreibung für den Nutzer, z. B. Shop und
               Artikel ("Zalando – Schuhe", "Amazon – Bürstenaufsatz-Set").
+            - status aus der Mail ableiten (wichtig bei Amazon, da online nicht
+              abrufbar): REGISTERED (angekündigt/bestellt), IN_TRANSIT (versandt/
+              unterwegs), OUT_FOR_DELIVERY (in Zustellung/in Auslieferung),
+              DELIVERED (zugestellt/geliefert). Wenn unklar, Feld weglassen.
             - Dieselbe Sendung nur einmal ausgeben (mehrere Mails zur selben
-              Lieferung zusammenfassen).
+              Lieferung zusammenfassen); dann den aktuellsten Status verwenden.
             - Reine Werbe-/Newsletter-Mails ignorieren. Wenn gar keine Sendungen
               enthalten sind, gib eine leere Liste zurück.
         """.trimIndent()
@@ -113,9 +121,13 @@ class ClaudeMailExtractor(
                       "type": "string",
                       "enum": ["DHL", "DEUTSCHE_POST", "HERMES", "DPD", "GLS", "UPS", "FEDEX", "AMAZON", "CHINA_POST", "CAINIAO", "YANWEN", "OTHER"]
                     },
-                    "label": {"type": "string"}
+                    "label": {"type": "string"},
+                    "status": {
+                      "type": "string",
+                      "enum": ["REGISTERED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "UNKNOWN"]
+                    }
                   },
-                  "required": ["tracking_number", "carrier", "label"],
+                  "required": ["tracking_number", "carrier", "label", "status"],
                   "additionalProperties": false
                 }
               }

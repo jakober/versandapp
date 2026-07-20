@@ -6,6 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import de.versandapp.data.ai.ClaudeTranslator
 import de.versandapp.data.db.AppDatabase
 import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.ClaudeTrackingProvider
@@ -35,9 +36,14 @@ class VersandApp : Application() {
 
         settings = SettingsRepository(this)
 
+        val translator = ClaudeTranslator()
         repository = TrackingRepository(
             dao = AppDatabase.get(this).parcelDao(),
             providersFactory = ::buildProviders,
+            translate = { texts ->
+                val key = settings.anthropicApiKey
+                if (key.isBlank()) texts else translator.toGerman(key, texts)
+            },
         )
 
         RefreshWorker.ensureChannel(this)

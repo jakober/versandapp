@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -88,13 +89,13 @@ class Ship24Provider(
 
         val events = tracking["events"]?.jsonArray.orEmpty().mapNotNull { element ->
             val event = element.jsonObject
-            val description = event["status"]?.jsonPrimitive?.content
+            val description = event["status"]?.jsonPrimitive?.contentOrNull
                 ?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
             TrackingUpdate(
-                timestamp = parseTimestamp(event["occurrenceDatetime"]?.jsonPrimitive?.content),
+                timestamp = parseTimestamp(event["occurrenceDatetime"]?.jsonPrimitive?.contentOrNull),
                 description = description,
-                location = event["location"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() },
-                status = mapMilestone(event["statusMilestone"]?.jsonPrimitive?.content),
+                location = event["location"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() },
+                status = mapMilestone(event["statusMilestone"]?.jsonPrimitive?.contentOrNull),
             )
         }.sortedBy { it.timestamp }
 

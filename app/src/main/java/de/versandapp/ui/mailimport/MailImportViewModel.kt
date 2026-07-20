@@ -48,8 +48,11 @@ class MailImportViewModel(
         viewModelScope.launch {
             try {
                 val known = repository.trackedNumbers()
-                val suggestions = scanner.scan(accessToken, settings.anthropicApiKey)
-                    .filter { it.trackingNumber !in known }
+                val suggestions = scanner.scan(
+                    gmailAccessToken = accessToken,
+                    anthropicApiKey = settings.anthropicApiKey,
+                    afterEpochSeconds = settings.lastMailImportEpochSeconds,
+                ).filter { it.trackingNumber !in known }
                 _state.value = ImportUiState.Ready(suggestions.map { SuggestionItem(it) })
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "Unbekannter Fehler")
@@ -82,8 +85,11 @@ class MailImportViewModel(
                     trackingNumber = item.suggestion.trackingNumber,
                     carrier = item.suggestion.carrier,
                     label = item.suggestion.sourceSubject.takeIf { it.isNotBlank() },
+                    initialStatus = item.suggestion.initialStatus,
                 )
             }
+            // Ab jetzt nur noch Mails ab diesem Zeitpunkt berücksichtigen
+            settings.lastMailImportEpochSeconds = System.currentTimeMillis() / 1000
             _state.value = ImportUiState.Done
         }
     }

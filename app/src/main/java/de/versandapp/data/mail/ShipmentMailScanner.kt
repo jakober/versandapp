@@ -10,8 +10,15 @@ class ShipmentMailScanner(
     private val claudeExtractor: ClaudeMailExtractor = ClaudeMailExtractor(),
 ) {
 
-    suspend fun scan(gmailAccessToken: String, anthropicApiKey: String): List<ShipmentSuggestion> {
-        val mails = gmail.searchShipmentMails(gmailAccessToken)
+    /**
+     * @param afterEpochSeconds Nur Mails ab diesem Zeitpunkt; 0 = letzte 24 h.
+     */
+    suspend fun scan(
+        gmailAccessToken: String,
+        anthropicApiKey: String,
+        afterEpochSeconds: Long = 0L,
+    ): List<ShipmentSuggestion> {
+        val mails = gmail.searchShipmentMails(gmailAccessToken, afterEpochSeconds)
         if (anthropicApiKey.isNotBlank()) {
             runCatching { return claudeExtractor.extract(anthropicApiKey, mails) }
         }
