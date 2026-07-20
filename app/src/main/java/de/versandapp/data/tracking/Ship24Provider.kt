@@ -25,9 +25,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * Dienstleister weltweit ab, inklusive China. Die API ist schon im
  * Gratis-Plan enthalten (10 Sendungen/Monat, kleinster Bezahlplan 3,90 $).
  *
- * `POST /trackers/track` ist idempotent: Der erste Aufruf legt den Tracker
- * an (zählt aufs Kontingent), jeder weitere liefert nur die aktuellen
- * Ereignisse.
+ * Ship24 hat zwei Plan-Typen mit getrennten Endpunkten:
+ *  - "per-shipment": `POST /trackers/track` (idempotent – erster Aufruf legt
+ *    den Tracker an und zählt aufs Kontingent, Folgeaufrufe sind frei)
+ *  - "per-call": `POST /tracking/search` (jeder Aufruf zählt)
+ * Der Provider versucht zuerst den per-shipment-Endpunkt und weicht bei
+ * "no_active_subscription" automatisch auf den per-call-Endpunkt aus –
+ * so funktioniert die App mit beiden Plan-Typen.
  */
 class Ship24Provider(
     private val apiKey: String,
@@ -40,30 +44,38 @@ class Ship24Provider(
 
     override suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult =
         withContext(Dispatchers.IO) {
-            val body = buildJsonObject { put("trackingNumber", trackingNumber) }.toString()
-
-            val request = Request.Builder()
-                .url("https://api.ship24.com/public/v1/trackers/track")
-                .header("Authorization", "Bearer $apiKey")
-                .post(body.toRequestBody("application/json".toMediaType()))
-                .build()
-
-            val responseBody = try {
-                client.newCall(request).execute().use { response ->
-                    val text = response.body?.string()
-                    if (!response.isSuccessful) {
-                        throw TrackingException(
-                            "Ship24 antwortete mit HTTP ${response.code}: ${text?.take(200)}"
-                        )
-                    }
-                    text ?: throw TrackingException("Leere Antwort von Ship24")
-                }
-            } catch (e: IOException) {
-                throw TrackingException("Netzwerkfehler bei der Ship24-Abfrage", e)
+            var response = post("trackers/track", trackingNumber)
+            if (response.code == 422 && response.body.contains("no_active_subscription")) {
+                // Konto hat einen per-call-Plan → anderen Endpunkt nutzen
+                response = post("tracking/search", trackingNumber)
             }
-
-            parse(json.parseToJsonElement(responseBody).jsonObject)
+            if (response.code !in 200..299) {
+                throw TrackingException(
+                    "Ship24 antwortete mit HTTP ${response.code}: ${response.body.take(200)}"
+                )
+            }
+            parse(json.parseToJsonElement(response.body).jsonObject)
         }
+
+    private data class ApiResponse(val code: Int, val body: String)
+
+    private fun post(path: String, trackingNumber: String): ApiResponse {
+        val body = buildJsonObject { put("trackingNumber", trackingNumber) }.toString()
+
+        val request = Request.Builder()
+            .url("https://api.ship24.com/public/v1/$path")
+            .header("Authorization", "Bearer $apiKey")
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                ApiResponse(response.code, response.body?.string() ?: "")
+            }
+        } catch (e: IOException) {
+            throw TrackingException("Netzwerkfehler bei der Ship24-Abfrage", e)
+        }
+    }
 
     private fun parse(root: JsonObject): TrackingResult {
         val tracking = root["data"]?.jsonObject
