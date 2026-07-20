@@ -23,12 +23,12 @@ data class TrackingResult(
  * Abstraktion über die Herkunft der Trackingdaten.
  *
  * Implementierungen:
+ *  - [ClaudeTrackingProvider]: prüft alle Dienste einheitlich per
+ *    Claude-Web-Suche (Anthropic-Key nötig).
  *  - [DemoTrackingProvider]: generiert plausible Beispieldaten, damit die App
  *    ohne API-Schlüssel sofort benutzbar ist.
- *  - [DhlTrackingProvider]: echte Anbindung an die DHL Unified Tracking API
- *    (API-Key nötig, kostenlos unter developer.dhl.com).
- *  - Weitere Carrier lassen sich über eigene Provider oder einen
- *    Aggregator-Dienst (17track, Ship24, AfterShip …) ergänzen.
+ *  - Direkte Carrier-APIs oder Aggregatoren (17track, Ship24 …) lassen sich
+ *    bei Bedarf als weitere Provider ergänzen.
  */
 interface TrackingProvider {
     fun supports(carrier: Carrier): Boolean
