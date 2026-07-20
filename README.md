@@ -102,8 +102,10 @@ Damit der Gmail-Login funktioniert, braucht die App einen OAuth-Client:
 2. OAuth-Zustimmungsbildschirm konfigurieren (Testnutzer: eigene
    Gmail-Adresse eintragen)
 3. OAuth-Client-ID vom Typ **Android** anlegen mit Paketname `de.versandapp`
-   und dem **SHA-1** des Debug-Keystores
-   (`./gradlew signingReport` zeigt ihn an)
+   und dem **SHA-1** des Debug-Keystores. Das Repo enthält einen festen
+   Debug-Keystore (`app/debug.keystore`), damit der Fingerabdruck über alle
+   CI-Builds stabil bleibt:
+   `A9:16:27:25:83:49:18:39:9B:F0:84:8B:00:3C:53:02:A1:76:BB:99`
 4. Fertig – kein API-Key im Code nötig, die Zuordnung läuft über
    Paketname + SHA-1
 

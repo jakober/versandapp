@@ -18,7 +18,22 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        // Fester Debug-Schlüssel im Repo, damit der Signatur-Fingerabdruck
+        // (SHA-1) über alle CI-Builds stabil bleibt – nötig für den
+        // Google-OAuth-Client (Gmail-Import). Nur für Debug-Builds!
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(

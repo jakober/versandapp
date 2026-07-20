@@ -10,3 +10,5 @@ captures/
 *.apk
 *.aab
 *.keystore
+# Fester Debug-Keystore für stabilen OAuth-SHA-1 (kein Geheimnis, nur Debug)
+!app/debug.keystore
