@@ -41,6 +41,13 @@ interface TrackingProvider {
     val minRefreshIntervalMs: Long
         get() = 0L
 
+    /**
+     * Ob der Provider im Hintergrund gerade abgefragt werden darf. Der
+     * Claude-Provider beschränkt sich damit auf ein Abendfenster (1×/Tag);
+     * manuelle Aktualisierung ignoriert auch diese Einschränkung.
+     */
+    fun isBackgroundRefreshAllowedNow(): Boolean = true
+
     /** Wirft [TrackingException] bei Netz-/API-Fehlern. */
     suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult
 }

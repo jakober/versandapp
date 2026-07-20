@@ -5,6 +5,7 @@ import de.versandapp.data.ai.ClaudeException
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.ParcelStatus
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import kotlinx.serialization.json.Json
@@ -19,8 +20,10 @@ import kotlinx.serialization.json.jsonPrimitive
  * Wichtige Eigenschaften:
  * - Wird nur für Pakete genutzt, für die kein direkter Carrier-Provider
  *   registriert ist (Reihenfolge in VersandApp).
- * - [minRefreshIntervalMs] drosselt das Hintergrund-Polling auf alle 6 Stunden,
- *   damit die API-Kosten klein bleiben (Web-Suche kostet pro Abfrage).
+ * - Automatisch läuft die Abfrage nur **einmal täglich im Abendfenster**
+ *   (ab 18 Uhr, via [isBackgroundRefreshAllowedNow] + [minRefreshIntervalMs]),
+ *   und nur für noch nicht zugestellte Pakete – so bleiben die Kosten der
+ *   Web-Suche klein. Der Aktualisieren-Button in der App fragt jederzeit ab.
  * - Claude wird angewiesen, nichts zu erfinden; wenn keine verlässlichen Daten
  *   gefunden werden, schlägt die Abfrage fehl und der letzte bekannte Status
  *   bleibt stehen.
@@ -34,7 +37,11 @@ class ClaudeTrackingProvider(
 
     override fun supports(carrier: Carrier): Boolean = true
 
-    override val minRefreshIntervalMs: Long = 6L * 60L * 60L * 1000L
+    // 20 h Mindestabstand + Abendfenster = genau eine automatische Abfrage pro Tag
+    override val minRefreshIntervalMs: Long = 20L * 60L * 60L * 1000L
+
+    override fun isBackgroundRefreshAllowedNow(): Boolean =
+        LocalTime.now().hour in 18..22
 
     override suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult {
         val response = try {

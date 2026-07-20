@@ -3,6 +3,7 @@ package de.versandapp.data.tracking
 import de.versandapp.data.db.ParcelDao
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.Parcel
+import de.versandapp.data.model.ParcelStatus
 import de.versandapp.data.model.ParcelWithEvents
 import de.versandapp.data.model.TrackingEvent
 import kotlinx.coroutines.flow.Flow
@@ -44,14 +45,17 @@ class TrackingRepository(
 
     /**
      * Holt den aktuellen Stand für ein Paket und ersetzt dessen Verlauf.
-     * Bei [force] = false respektiert die Abfrage die Drosselung des Providers
-     * (relevant für das Hintergrund-Polling kostenpflichtiger Provider).
+     * Bei [force] = false respektiert die Abfrage die Drosselung und das
+     * Zeitfenster des Providers sowie den Zustellstatus (zugestellte Pakete
+     * werden im Hintergrund nicht mehr abgefragt).
      */
     suspend fun refresh(parcelId: Long, force: Boolean = false) {
         val parcel = dao.getAll().firstOrNull { it.id == parcelId } ?: return
         val provider = providersFactory().firstOrNull { it.supports(parcel.carrier) } ?: return
 
         if (!force) {
+            if (parcel.status == ParcelStatus.DELIVERED) return
+            if (!provider.isBackgroundRefreshAllowedNow()) return
             val lastUpdated = parcel.lastUpdated
             if (lastUpdated != null &&
                 System.currentTimeMillis() - lastUpdated < provider.minRefreshIntervalMs
@@ -82,11 +86,18 @@ class TrackingRepository(
         )
     }
 
-    /** Aktualisiert alle Pakete; Fehler einzelner Pakete brechen den Rest nicht ab. */
+    /**
+     * Aktualisiert alle noch nicht zugestellten Pakete; Fehler einzelner
+     * Pakete brechen den Rest nicht ab. Zugestellte Pakete werden auch bei
+     * [force] übersprungen (ihr Status ändert sich nicht mehr) – ein
+     * einzelnes Paket lässt sich in der Detailansicht trotzdem aktualisieren.
+     */
     suspend fun refreshAll(force: Boolean = false) {
-        dao.getAll().forEach { parcel ->
-            runCatching { refresh(parcel.id, force) }
-        }
+        dao.getAll()
+            .filter { it.status != ParcelStatus.DELIVERED }
+            .forEach { parcel ->
+                runCatching { refresh(parcel.id, force) }
+            }
     }
 
     /** Bereits verfolgte Trackingnummern – für die Duplikat-Erkennung beim Mail-Import. */

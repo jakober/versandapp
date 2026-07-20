@@ -44,7 +44,7 @@ Aktuell registriert (siehe `VersandApp.kt`):
 | Provider | Zweck |
 | --- | --- |
 | `DhlTrackingProvider` | Echte Daten über die **DHL Unified Tracking API** – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com), in den App-Einstellungen (Zahnrad) eintragen |
-| `ClaudeTrackingProvider` | **KI-Fallback** für Dienste ohne API: Claude (Opus) recherchiert den Status per Web-Suche. Hintergrund-Polling auf alle 6 h gedrosselt, um Kosten klein zu halten; manuelle Aktualisierung geht immer. Anthropic-Key in den Einstellungen |
+| `ClaudeTrackingProvider` | **KI-Fallback** für Dienste ohne API: Claude (Opus) recherchiert den Status per Web-Suche. Automatisch läuft das nur **1× täglich abends (ab 18 Uhr)** und nur für **noch nicht zugestellte** Pakete – so bleiben die Kosten minimal. Der ↻-Button in der App fragt jederzeit manuell ab. Anthropic-Key in den Einstellungen |
 | `DemoTrackingProvider` | Fallback mit realistischen Beispieldaten, damit die App **ohne Keys sofort läuft** |
 
 Die Provider-Reihenfolge ist die Priorität: DHL-Pakete gehen über die
