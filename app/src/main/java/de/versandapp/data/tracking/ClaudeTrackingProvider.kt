@@ -50,7 +50,7 @@ class ClaudeTrackingProvider(
                 model = MODEL,
                 maxTokens = 4096,
                 system = SYSTEM_PROMPT,
-                userText = "Dienstleister: ${carrier.displayName}\nTrackingnummer: $trackingNumber",
+                userText = buildUserText(trackingNumber, carrier),
                 tools = json.parseToJsonElement(WEB_SEARCH_TOOLS).jsonArray,
             )
         } catch (e: ClaudeException) {
@@ -58,6 +58,31 @@ class ClaudeTrackingProvider(
         }
 
         return parse(api.textContent(response))
+    }
+
+    /**
+     * Suchmaschinen indexieren einzelne Trackingnummern nicht – deshalb
+     * bekommt Claude die konkreten Tracking-URLs mitgeliefert und kann sie
+     * direkt per Web-Abruf öffnen, statt nur zu suchen.
+     */
+    private fun buildUserText(trackingNumber: String, carrier: Carrier): String {
+        val urls = buildList {
+            carrier.trackingUrl(trackingNumber)?.let { add(it) }
+            if (carrier == Carrier.DHL || carrier == Carrier.DEUTSCHE_POST) {
+                add(
+                    "https://www.dhl.de/int-verfolgen/data/search" +
+                        "?piececode=$trackingNumber&language=de&noRedirect=true"
+                )
+            }
+            add("https://t.17track.net/de#nums=$trackingNumber")
+        }
+        return buildString {
+            appendLine("Dienstleister: ${carrier.displayName}")
+            appendLine("Trackingnummer: $trackingNumber")
+            appendLine()
+            appendLine("Diese Tracking-URLs kannst du direkt abrufen:")
+            urls.forEach { appendLine(it) }
+        }
     }
 
     private fun parse(text: String): TrackingResult {
@@ -131,7 +156,12 @@ class ClaudeTrackingProvider(
             }
 
             Regeln:
-            - events chronologisch aufsteigend, nur Ereignisse aus den Suchergebnissen.
+            - Rufe zuerst die mitgelieferten Tracking-URLs direkt ab (web_fetch) –
+              Suchmaschinen indexieren einzelne Trackingnummern in der Regel
+              nicht, eine reine Web-Suche nach der Nummer liefert daher meist
+              nichts. Web-Suche nur ergänzend nutzen.
+            - events chronologisch aufsteigend, nur Ereignisse aus den abgerufenen
+              Seiten bzw. Suchergebnissen.
             - Erfinde NIEMALS Statusdaten. Wenn du keine verlässlichen Informationen
               zu genau dieser Trackingnummer findest, antworte mit {"found": false}.
             - Amazon-Bestellnummern (Format 123-1234567-1234567) sind nicht
