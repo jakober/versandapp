@@ -45,9 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
+import de.versandapp.data.mail.GmailService
 import de.versandapp.ui.components.CarrierBadge
-
-private const val GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 
 /**
  * Schritt 2: Postfach verknüpfen und gefundene Sendungen importieren.
@@ -80,7 +79,7 @@ fun MailImportScreen(
 
     fun connectGmail() {
         val request = AuthorizationRequest.builder()
-            .setRequestedScopes(listOf(Scope(GMAIL_READONLY_SCOPE)))
+            .setRequestedScopes(listOf(Scope(GmailService.SCOPE_READONLY)))
             .build()
         authClient.authorize(request)
             .addOnSuccessListener { result ->
@@ -94,6 +93,14 @@ fun MailImportScreen(
                 }
             }
             .addOnFailureListener { viewModel.onAuthError(Exception(it)) }
+    }
+
+    // Bereits verknüpft? Dann still verbinden und direkt scannen –
+    // der Google-Dialog erscheint nur beim allerersten Mal.
+    LaunchedEffect(Unit) {
+        if (viewModel.isGmailLinked() && state is ImportUiState.NotConnected) {
+            connectGmail()
+        }
     }
 
     LaunchedEffect(state) {

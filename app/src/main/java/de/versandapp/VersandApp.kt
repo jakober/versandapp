@@ -12,6 +12,7 @@ import de.versandapp.data.tracking.ClaudeTrackingProvider
 import de.versandapp.data.tracking.DemoTrackingProvider
 import de.versandapp.data.tracking.TrackingProvider
 import de.versandapp.data.tracking.TrackingRepository
+import de.versandapp.worker.MailImportWorker
 import de.versandapp.worker.RefreshWorker
 import java.util.concurrent.TimeUnit
 
@@ -39,6 +40,7 @@ class VersandApp : Application() {
 
         RefreshWorker.ensureChannel(this)
         scheduleBackgroundRefresh()
+        scheduleMailImport()
     }
 
     /**
@@ -64,6 +66,26 @@ class VersandApp : Application() {
             .build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             RefreshWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request,
+        )
+    }
+
+    /**
+     * Automatischer Mail-Import alle 6 Stunden (sofern Gmail verknüpft ist);
+     * neu gefundene Sendungen werden importiert und per Benachrichtigung
+     * gemeldet.
+     */
+    private fun scheduleMailImport() {
+        val request = PeriodicWorkRequestBuilder<MailImportWorker>(6, TimeUnit.HOURS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            MailImportWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             request,
         )

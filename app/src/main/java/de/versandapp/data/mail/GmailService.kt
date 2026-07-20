@@ -109,6 +109,8 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
         html.replace(Regex("<[^>]+>"), " ").replace(Regex("&\\w+;"), " ")
 
     companion object {
+        const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
+
         /** Versand-Mails der letzten 60 Tage von bekannten Absendern oder mit typischem Betreff. */
         private const val SHIPMENT_QUERY =
             "newer_than:60d (from:(dhl.de OR dhl.com OR deutschepost.de OR myhermes.de OR " +
