@@ -8,6 +8,13 @@ import de.versandapp.data.model.ParcelWithEvents
 import de.versandapp.data.model.TrackingEvent
 import kotlinx.coroutines.flow.Flow
 
+/** Ergebnis einer einzelnen Statusabfrage – Grundlage für die Fortschrittsanzeige. */
+sealed interface RefreshOutcome {
+    data class Updated(val status: de.versandapp.data.model.ParcelStatus, val eventCount: Int) : RefreshOutcome
+    data class Skipped(val reason: String) : RefreshOutcome
+    data class Failed(val message: String) : RefreshOutcome
+}
+
 /**
  * Zentrale Fachlogik: verwaltet Pakete in der lokalen Datenbank und holt
  * Statusupdates über den jeweils passenden [TrackingProvider].
@@ -37,34 +44,45 @@ class TrackingRepository(
                 label = label?.takeIf { it.isNotBlank() },
             )
         )
-        runCatching { refresh(id, force = true) }
+        refresh(id, force = true)
         return id
     }
 
     suspend fun deleteParcel(parcel: Parcel) = dao.delete(parcel)
 
     /**
-     * Holt den aktuellen Stand für ein Paket und ersetzt dessen Verlauf.
+     * Holt den aktuellen Stand für ein Paket, ersetzt dessen Verlauf und
+     * liefert das Ergebnis zurück (für die Fortschrittsanzeige). Wirft nicht.
      * Bei [force] = false respektiert die Abfrage die Drosselung und das
      * Zeitfenster des Providers sowie den Zustellstatus (zugestellte Pakete
      * werden im Hintergrund nicht mehr abgefragt).
      */
-    suspend fun refresh(parcelId: Long, force: Boolean = false) {
-        val parcel = dao.getAll().firstOrNull { it.id == parcelId } ?: return
-        val provider = providersFactory().firstOrNull { it.supports(parcel.carrier) } ?: return
+    suspend fun refresh(parcelId: Long, force: Boolean = false): RefreshOutcome {
+        val parcel = dao.getAll().firstOrNull { it.id == parcelId }
+            ?: return RefreshOutcome.Skipped("Paket nicht gefunden")
+        val provider = providersFactory().firstOrNull { it.supports(parcel.carrier) }
+            ?: return RefreshOutcome.Skipped("Kein Tracking-Dienst verfügbar")
 
         if (!force) {
-            if (parcel.status == ParcelStatus.DELIVERED) return
-            if (!provider.isBackgroundRefreshAllowedNow()) return
+            if (parcel.status == ParcelStatus.DELIVERED) {
+                return RefreshOutcome.Skipped("Bereits zugestellt")
+            }
+            if (!provider.isBackgroundRefreshAllowedNow()) {
+                return RefreshOutcome.Skipped("Außerhalb des Abfragefensters")
+            }
             val lastUpdated = parcel.lastUpdated
             if (lastUpdated != null &&
                 System.currentTimeMillis() - lastUpdated < provider.minRefreshIntervalMs
             ) {
-                return
+                return RefreshOutcome.Skipped("Kürzlich aktualisiert")
             }
         }
 
-        val result = provider.track(parcel.trackingNumber, parcel.carrier)
+        val result = try {
+            provider.track(parcel.trackingNumber, parcel.carrier)
+        } catch (e: Exception) {
+            return RefreshOutcome.Failed(e.message ?: "Unbekannter Fehler")
+        }
 
         dao.replaceEvents(
             parcelId = parcel.id,
@@ -84,7 +102,14 @@ class TrackingRepository(
                 lastUpdated = System.currentTimeMillis(),
             )
         )
+        return RefreshOutcome.Updated(result.status, result.events.size)
     }
+
+    /** Alle noch nicht zugestellten Pakete (Reihenfolge wie in der Liste). */
+    suspend fun openParcels(): List<Parcel> =
+        dao.getAll()
+            .filter { it.status != ParcelStatus.DELIVERED }
+            .sortedByDescending { it.createdAt }
 
     /**
      * Aktualisiert alle noch nicht zugestellten Pakete; Fehler einzelner
@@ -93,11 +118,9 @@ class TrackingRepository(
      * einzelnes Paket lässt sich in der Detailansicht trotzdem aktualisieren.
      */
     suspend fun refreshAll(force: Boolean = false) {
-        dao.getAll()
-            .filter { it.status != ParcelStatus.DELIVERED }
-            .forEach { parcel ->
-                runCatching { refresh(parcel.id, force) }
-            }
+        openParcels().forEach { parcel ->
+            refresh(parcel.id, force)
+        }
     }
 
     /** Bereits verfolgte Trackingnummern – für die Duplikat-Erkennung beim Mail-Import. */

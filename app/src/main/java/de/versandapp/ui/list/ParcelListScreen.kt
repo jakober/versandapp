@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import de.versandapp.data.model.ParcelStatus
 import de.versandapp.data.model.ParcelWithEvents
 import de.versandapp.ui.ParcelViewModel
 import de.versandapp.ui.components.CarrierBadge
@@ -55,6 +56,7 @@ fun ParcelListScreen(
 ) {
     val parcels by viewModel.parcels.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val refreshProgress by viewModel.refreshProgress.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
 
@@ -91,13 +93,31 @@ fun ParcelListScreen(
         if (parcels.isEmpty()) {
             EmptyState(Modifier.padding(innerPadding))
         } else {
+            // Offene Sendungen (neueste zuerst) oben, zugestellte in einem
+            // eigenen Abschnitt darunter.
+            val (delivered, open) = parcels.partition {
+                it.parcel.status == ParcelStatus.DELIVERED
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(parcels, key = { it.parcel.id }) { item ->
+                items(open, key = { it.parcel.id }) { item ->
                     ParcelCard(item = item, onClick = { onParcelClick(item.parcel.id) })
+                }
+                if (delivered.isNotEmpty()) {
+                    item(key = "delivered_header") {
+                        Text(
+                            "Zugestellt",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                    items(delivered, key = { it.parcel.id }) { item ->
+                        ParcelCard(item = item, onClick = { onParcelClick(item.parcel.id) })
+                    }
                 }
             }
         }
@@ -110,6 +130,13 @@ fun ParcelListScreen(
                 viewModel.addParcel(trackingNumber, carrier, label)
                 showAddDialog = false
             },
+        )
+    }
+
+    refreshProgress?.let { progress ->
+        RefreshProgressDialog(
+            progress = progress,
+            onDismiss = { viewModel.dismissRefreshProgress() },
         )
     }
 
