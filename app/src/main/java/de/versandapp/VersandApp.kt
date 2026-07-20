@@ -12,6 +12,7 @@ import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.ClaudeTrackingProvider
 import de.versandapp.data.tracking.DemoTrackingProvider
 import de.versandapp.data.tracking.DhlTrackingProvider
+import de.versandapp.data.tracking.Ship24Provider
 import de.versandapp.data.tracking.TrackingProvider
 import de.versandapp.data.tracking.TrackingRepository
 import de.versandapp.worker.MailImportWorker
@@ -52,16 +53,20 @@ class VersandApp : Application() {
 
     /**
      * Provider-Kette, bei jeder Aktualisierung neu aufgebaut (Keys aus den
-     * Einstellungen wirken sofort). Reihenfolge = Priorität:
+     * Einstellungen wirken sofort). Reihenfolge = Priorität; die Repository-
+     * Logik geht sie der Reihe nach durch und nimmt die erste Quelle, die
+     * verlässliche Daten liefert:
      * 1. DHL-API (kostenlos, zuverlässigste Quelle) – nur für DHL/Post
-     * 2. Claude-Web-Recherche für alle übrigen Dienste (inkl. China)
-     * 3. Demo-Daten, damit die App ohne Keys benutzbar bleibt
+     * 2. Claude-Online-Suche für alle Dienste (inkl. China) – kostenlos/günstig
+     * 3. Ship24-API als kostenpflichtiger Notnagel – nur wenn 1+2 nichts fanden
+     * 4. Demo-Daten, nur wenn gar kein Key hinterlegt ist (App läuft sofort)
      */
     private fun buildProviders(): List<TrackingProvider> = buildList {
         val current = settings.current()
         if (current.dhlApiKey.isNotBlank()) add(DhlTrackingProvider(current.dhlApiKey))
         if (current.anthropicApiKey.isNotBlank()) add(ClaudeTrackingProvider(current.anthropicApiKey))
-        add(DemoTrackingProvider())
+        if (current.ship24ApiKey.isNotBlank()) add(Ship24Provider(current.ship24ApiKey))
+        if (isEmpty()) add(DemoTrackingProvider())
     }
 
     /** Stündliches Polling im Hintergrund; benachrichtigt bei Statuswechsel. */

@@ -44,8 +44,13 @@ Aktuell registriert (siehe `VersandApp.kt`):
 | Provider | Zweck |
 | --- | --- |
 | `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com) („Shipment Tracking – Unified") |
-| `ClaudeTrackingProvider` | **KI-Online-Suche für alle übrigen Dienste weltweit** (Hermes, DPD, GLS, Auslandspakete inkl. China): Claude Haiku ruft Tracking-Seiten ab. Automatisch 1× täglich abends, nur offene Pakete |
-| `DemoTrackingProvider` | Fallback mit Beispieldaten, damit die App **ohne Keys sofort läuft** |
+| `ClaudeTrackingProvider` | **KI-Online-Suche für alle übrigen Dienste weltweit** (Hermes, DPD, GLS, Auslandspakete inkl. China): Claude Haiku ruft die Daten-/JSON-Endpunkte der Carrier und Tracking-Portale ab. Automatisch 1× täglich abends, nur offene Pakete |
+| `Ship24Provider` | **Kostenpflichtiger Notnagel** ganz am Ende der Kette: wird nur angefragt, wenn DHL-API und Online-Suche nichts gefunden haben – so bleibt das knappe Ship24-Kontingent geschont. Optionaler Key auf [ship24.com](https://www.ship24.com) |
+| `DemoTrackingProvider` | Fallback mit Beispieldaten, **nur** aktiv, wenn gar kein Key hinterlegt ist – so läuft die App sofort |
+
+Die `TrackingRepository`-Logik geht die Kette **der Reihe nach** durch und
+nimmt die erste Quelle, die verlässliche Daten liefert. Erst wenn eine Quelle
+nichts findet, wird die nächste (teurere) angefragt.
 
 Alle Keys werden in den App-Einstellungen (Zahnrad) gespeichert
 (SharedPreferences), nicht im Code.

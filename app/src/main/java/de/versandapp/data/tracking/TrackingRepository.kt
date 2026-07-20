@@ -73,30 +73,60 @@ class TrackingRepository(
     suspend fun refresh(parcelId: Long, force: Boolean = false): RefreshOutcome {
         val parcel = dao.getAll().firstOrNull { it.id == parcelId }
             ?: return RefreshOutcome.Skipped("Paket nicht gefunden")
-        val provider = providersFactory().firstOrNull { it.supports(parcel.carrier) }
-            ?: return RefreshOutcome.Skipped("Kein Tracking-Dienst verfügbar")
+        val supporting = providersFactory().filter { it.supports(parcel.carrier) }
+        if (supporting.isEmpty()) return RefreshOutcome.Skipped("Kein Tracking-Dienst verfügbar")
 
-        if (!force) {
-            if (parcel.status == ParcelStatus.DELIVERED) {
-                return RefreshOutcome.Skipped("Bereits zugestellt")
-            }
-            if (!provider.isBackgroundRefreshAllowedNow()) {
-                return RefreshOutcome.Skipped("Außerhalb des Abfragefensters")
-            }
-            val lastUpdated = parcel.lastUpdated
-            if (lastUpdated != null &&
-                System.currentTimeMillis() - lastUpdated < provider.minRefreshIntervalMs
-            ) {
-                return RefreshOutcome.Skipped("Kürzlich aktualisiert")
-            }
+        if (!force && parcel.status == ParcelStatus.DELIVERED) {
+            return RefreshOutcome.Skipped("Bereits zugestellt")
         }
 
-        val result = try {
-            provider.track(parcel.trackingNumber, parcel.carrier)
-        } catch (e: Exception) {
-            return RefreshOutcome.Failed(e.message ?: "Unbekannter Fehler")
+        // Provider-Kette der Reihe nach durchgehen: der erste, der verlässliche
+        // Daten liefert, gewinnt. Dadurch bleibt eine kostenpflichtige Quelle
+        // (Ship24) ein echter Notnagel – sie wird nur angefragt, wenn die freien
+        // Quellen davor (DHL-API, Claude-Online-Suche) nichts gefunden haben.
+        var eligibleCount = 0
+        var throttled = false
+        var outsideWindow = false
+        var lastFailure: String? = null
+        for (provider in supporting) {
+            if (!force) {
+                if (!provider.isBackgroundRefreshAllowedNow()) {
+                    outsideWindow = true
+                    continue
+                }
+                val lastUpdated = parcel.lastUpdated
+                if (lastUpdated != null &&
+                    System.currentTimeMillis() - lastUpdated < provider.minRefreshIntervalMs
+                ) {
+                    throttled = true
+                    continue
+                }
+            }
+            eligibleCount++
+            val result = try {
+                provider.track(parcel.trackingNumber, parcel.carrier)
+            } catch (e: Exception) {
+                lastFailure = e.message ?: "Unbekannter Fehler"
+                continue
+            }
+            persistResult(parcel, result)
+            return RefreshOutcome.Updated(result.status, result.events.size)
         }
 
+        if (eligibleCount == 0) {
+            return RefreshOutcome.Skipped(
+                when {
+                    throttled -> "Kürzlich aktualisiert"
+                    outsideWindow -> "Außerhalb des Abfragefensters"
+                    else -> "Kein Tracking-Dienst verfügbar"
+                }
+            )
+        }
+        return RefreshOutcome.Failed(lastFailure ?: "Kein Status gefunden")
+    }
+
+    /** Speichert ein Abfrageergebnis: Verlauf ins Deutsche übersetzen und ablegen. */
+    private suspend fun persistResult(parcel: Parcel, result: TrackingResult) {
         // Verlaufstexte vorab ins Deutsche übersetzen (ein kurzer Aufruf für alle)
         val germanDescriptions = runCatching {
             translate(result.events.map { it.description })
@@ -120,7 +150,6 @@ class TrackingRepository(
                 lastUpdated = System.currentTimeMillis(),
             )
         )
-        return RefreshOutcome.Updated(result.status, result.events.size)
     }
 
     /** Alle noch nicht zugestellten Pakete (Reihenfolge wie in der Liste). */

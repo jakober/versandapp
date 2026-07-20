@@ -71,18 +71,36 @@ class ClaudeTrackingProvider(
         // leere App-Hülle ohne Statusdaten.
         val urls = buildList {
             carrier.trackingUrl(trackingNumber)?.let { add(it) }
-            if (carrier == Carrier.DHL || carrier == Carrier.DEUTSCHE_POST) {
-                add(
+            // Direkte Daten-Endpunkte, die den Status als JSON liefern (statt der
+            // JavaScript-Seite). Erhöht die Trefferquote deutlich, weil die
+            // sichtbare Tracking-Seite die Daten meist erst per Nachladen zeigt.
+            when (carrier) {
+                Carrier.DHL, Carrier.DEUTSCHE_POST -> add(
                     "https://www.dhl.de/int-verfolgen/data/search" +
                         "?piececode=$trackingNumber&language=de&noRedirect=true"
                 )
+                Carrier.HERMES -> add(
+                    "https://api.myhermes.de/hermes-tracking-progress-rest/" +
+                        "consumer/v1/tracking/$trackingNumber"
+                )
+                Carrier.GLS -> add(
+                    "https://gls-group.eu/app/service/open/rest/DE/de/rstt001/$trackingNumber"
+                )
+                Carrier.DPD -> add(
+                    "https://tracking.dpd.de/rest/plc/de_DE/$trackingNumber"
+                )
+                else -> {}
             }
+            // Tracking-Portale als zusätzliche Quelle (decken viele Carrier und
+            // Auslandssendungen ab).
+            add("https://parcelsapp.com/en/tracking/$trackingNumber")
         }
         return buildString {
             appendLine("Dienstleister: ${carrier.displayName}")
             appendLine("Trackingnummer: $trackingNumber")
             appendLine()
-            appendLine("Diese Tracking-URLs kannst du direkt abrufen:")
+            appendLine("Diese URLs kannst du direkt abrufen (die /rest-, /data- und")
+            appendLine("api.-URLs liefern den Status meist als JSON):")
             urls.forEach { appendLine(it) }
         }
     }
@@ -160,14 +178,22 @@ class ClaudeTrackingProvider(
             }
 
             Regeln:
-            - Rufe zuerst die mitgelieferten Tracking-URLs direkt ab (web_fetch) –
-              Suchmaschinen indexieren einzelne Trackingnummern in der Regel
-              nicht, eine reine Web-Suche nach der Nummer liefert daher meist
-              nichts. Web-Suche nur ergänzend nutzen.
+            - Rufe zuerst die mitgelieferten URLs direkt ab (web_fetch). Die
+              /rest-, /data- und api.-URLs liefern den Status oft direkt als
+              JSON – das ist die zuverlässigste Quelle. Suchmaschinen indexieren
+              einzelne Trackingnummern in der Regel nicht.
+            - Wenn die sichtbare Tracking-Seite keinen Status zeigt (die Daten
+              werden dort per JavaScript nachgeladen), nutze den JSON-Endpunkt
+              oder suche die Nummer zusätzlich auf Tracking-Portalen
+              (parcelsapp.com, ordertracker.com, 17track.net) und rufe deren
+              Trefferseite ab.
+            - Gib nicht zu früh auf: Probiere alle mitgelieferten URLs sowie eine
+              ergänzende Web-Suche, bevor du {"found": false} antwortest.
             - events chronologisch aufsteigend, nur Ereignisse aus den abgerufenen
               Seiten bzw. Suchergebnissen.
-            - Erfinde NIEMALS Statusdaten. Wenn du keine verlässlichen Informationen
-              zu genau dieser Trackingnummer findest, antworte mit {"found": false}.
+            - Erfinde NIEMALS Statusdaten. Wenn du nach allen Versuchen keine
+              verlässlichen Informationen zu genau dieser Trackingnummer findest,
+              antworte mit {"found": false}.
             - Amazon-Bestellnummern (Format 123-1234567-1234567) sind nicht
               öffentlich einsehbar – antworte dann sofort mit {"found": false},
               ohne Web-Suche.
@@ -175,8 +201,8 @@ class ClaudeTrackingProvider(
 
         private val WEB_SEARCH_TOOLS = """
         [
-          {"type": "web_search_20250305", "name": "web_search", "max_uses": 4},
-          {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 4}
+          {"type": "web_search_20250305", "name": "web_search", "max_uses": 6},
+          {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 8}
         ]
         """.trimIndent()
     }

@@ -26,10 +26,11 @@ import de.versandapp.data.settings.AppSettings
 fun SettingsDialog(
     initial: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (anthropicApiKey: String, dhlApiKey: String) -> Unit,
+    onSave: (anthropicApiKey: String, dhlApiKey: String, ship24ApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
+    var ship24Key by remember { mutableStateOf(initial.ship24ApiKey) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -67,10 +68,27 @@ fun SettingsDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = ship24Key,
+                    onValueChange = { ship24Key = it },
+                    label = { Text("Ship24 API-Key (Notnagel)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Optionaler kostenpflichtiger Notnagel: wird nur abgefragt, " +
+                        "wenn DHL-API und Online-Suche nichts gefunden haben – so " +
+                        "bleibt das knappe Ship24-Kontingent geschont. Leer lassen, " +
+                        "wenn du kein Ship24 nutzen willst.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey, dhlKey) }) {
+            TextButton(onClick = { onSave(anthropicKey, dhlKey, ship24Key) }) {
                 Text("Speichern")
             }
         },
