@@ -5,7 +5,6 @@ import android.content.Context
 data class AppSettings(
     val anthropicApiKey: String,
     val dhlApiKey: String,
-    val tracktryApiKey: String,
 )
 
 /**
@@ -29,11 +28,6 @@ class SettingsRepository(context: Context) {
         get() = prefs.getString(KEY_DHL, "") ?: ""
         set(value) = prefs.edit().putString(KEY_DHL, value.trim()).apply()
 
-    /** Key von tracktry.com – Haupt-Tracking-Quelle für alle Dienste weltweit. */
-    var tracktryApiKey: String
-        get() = prefs.getString(KEY_TRACKTRY, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_TRACKTRY, value.trim()).apply()
-
     /**
      * Merkt sich, dass der Nutzer Gmail bereits verknüpft hat – dann verbindet
      * sich die App still neu (ohne Google-Dialog) und der Hintergrund-Import
@@ -54,13 +48,11 @@ class SettingsRepository(context: Context) {
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
-        tracktryApiKey = tracktryApiKey,
     )
 
     private companion object {
         const val KEY_ANTHROPIC = "anthropic_api_key"
         const val KEY_DHL = "dhl_api_key"
-        const val KEY_TRACKTRY = "tracktry_api_key"
         const val KEY_GMAIL_LINKED = "gmail_linked"
         const val KEY_LAST_MAIL_IMPORT = "last_mail_import_epoch"
     }

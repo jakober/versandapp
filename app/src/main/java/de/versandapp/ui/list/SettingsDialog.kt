@@ -26,32 +26,16 @@ import de.versandapp.data.settings.AppSettings
 fun SettingsDialog(
     initial: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (anthropicApiKey: String, dhlApiKey: String, tracktryApiKey: String) -> Unit,
+    onSave: (anthropicApiKey: String, dhlApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
-    var tracktryKey by remember { mutableStateOf(initial.tracktryApiKey) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Einstellungen") },
         text = {
             Column {
-                OutlinedTextField(
-                    value = tracktryKey,
-                    onValueChange = { tracktryKey = it },
-                    label = { Text("Tracktry API-Key") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Haupt-Tracking-Quelle für alle Dienste weltweit (inkl. China). " +
-                        "Key auf tracktry.com – Abrechnung pro Sendung im Cent-Bereich.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = anthropicKey,
                     onValueChange = { anthropicKey = it },
@@ -61,8 +45,9 @@ fun SettingsDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Für die KI-Mail-Erkennung; dient beim Tracking nur noch als " +
-                        "Fallback ohne Tracktry-Key. Key erstellen: console.anthropic.com",
+                    "Für die KI-Mail-Erkennung und die Online-Suche aller Dienste " +
+                        "ohne eigene API (Hermes, DPD, GLS, Auslandspakete inkl. China). " +
+                        "Key erstellen: console.anthropic.com",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -85,7 +70,7 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey, dhlKey, tracktryKey) }) {
+            TextButton(onClick = { onSave(anthropicKey, dhlKey) }) {
                 Text("Speichern")
             }
         },

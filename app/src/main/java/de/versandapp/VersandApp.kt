@@ -12,7 +12,6 @@ import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.ClaudeTrackingProvider
 import de.versandapp.data.tracking.DemoTrackingProvider
 import de.versandapp.data.tracking.DhlTrackingProvider
-import de.versandapp.data.tracking.TracktryProvider
 import de.versandapp.data.tracking.TrackingProvider
 import de.versandapp.data.tracking.TrackingRepository
 import de.versandapp.worker.MailImportWorker
@@ -55,16 +54,12 @@ class VersandApp : Application() {
      * Provider-Kette, bei jeder Aktualisierung neu aufgebaut (Keys aus den
      * Einstellungen wirken sofort). Reihenfolge = Priorität:
      * 1. DHL-API (kostenlos, zuverlässigste Quelle) – nur für DHL/Post
-     * 2. Tracktry-API – alle Dienste weltweit (inkl. China)
-     * 3. Claude-Web-Recherche als Fallback ohne Tracktry-Key
-     * 4. Demo-Daten, damit die App ohne Keys benutzbar bleibt
+     * 2. Claude-Web-Recherche für alle übrigen Dienste (inkl. China)
+     * 3. Demo-Daten, damit die App ohne Keys benutzbar bleibt
      */
     private fun buildProviders(): List<TrackingProvider> = buildList {
         val current = settings.current()
         if (current.dhlApiKey.isNotBlank()) add(DhlTrackingProvider(current.dhlApiKey))
-        if (current.tracktryApiKey.isNotBlank()) {
-            add(TracktryProvider(current.tracktryApiKey))
-        }
         if (current.anthropicApiKey.isNotBlank()) add(ClaudeTrackingProvider(current.anthropicApiKey))
         add(DemoTrackingProvider())
     }

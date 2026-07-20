@@ -44,8 +44,7 @@ Aktuell registriert (siehe `VersandApp.kt`):
 | Provider | Zweck |
 | --- | --- |
 | `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com) („Shipment Tracking – Unified") |
-| `TracktryProvider` | **Haupt-Quelle für alle übrigen Dienste weltweit** (inkl. China): Tracktry-API (Pay-as-you-go-Ableger von 17track), Abrechnung pro Sendung im Cent-Bereich, Key auf [tracktry.com](https://www.tracktry.com) |
-| `ClaudeTrackingProvider` | **KI-Fallback** (nur aktiv, wenn kein Tracktry-Key hinterlegt ist): Claude Haiku ruft Tracking-Seiten ab. Automatisch 1× täglich abends, nur offene Pakete |
+| `ClaudeTrackingProvider` | **KI-Online-Suche für alle übrigen Dienste weltweit** (Hermes, DPD, GLS, Auslandspakete inkl. China): Claude Haiku ruft Tracking-Seiten ab. Automatisch 1× täglich abends, nur offene Pakete |
 | `DemoTrackingProvider` | Fallback mit Beispieldaten, damit die App **ohne Keys sofort läuft** |
 
 Alle Keys werden in den App-Einstellungen (Zahnrad) gespeichert
