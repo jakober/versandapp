@@ -4,7 +4,6 @@ import android.content.Context
 
 data class AppSettings(
     val anthropicApiKey: String,
-    val dhlApiKey: String,
 )
 
 /**
@@ -23,17 +22,11 @@ class SettingsRepository(context: Context) {
         get() = prefs.getString(KEY_ANTHROPIC, "") ?: ""
         set(value) = prefs.edit().putString(KEY_ANTHROPIC, value.trim()).apply()
 
-    var dhlApiKey: String
-        get() = prefs.getString(KEY_DHL, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_DHL, value.trim()).apply()
-
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
-        dhlApiKey = dhlApiKey,
     )
 
     private companion object {
         const val KEY_ANTHROPIC = "anthropic_api_key"
-        const val KEY_DHL = "dhl_api_key"
     }
 }

@@ -43,13 +43,13 @@ Aktuell registriert (siehe `VersandApp.kt`):
 
 | Provider | Zweck |
 | --- | --- |
-| `DhlTrackingProvider` | Echte Daten über die **DHL Unified Tracking API** – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com), in den App-Einstellungen (Zahnrad) eintragen |
-| `ClaudeTrackingProvider` | **KI-Fallback** für Dienste ohne API: Claude (Opus) recherchiert den Status per Web-Suche. Automatisch läuft das nur **1× täglich abends (ab 18 Uhr)** und nur für **noch nicht zugestellte** Pakete – so bleiben die Kosten minimal. Der ↻-Button in der App fragt jederzeit manuell ab. Anthropic-Key in den Einstellungen |
-| `DemoTrackingProvider` | Fallback mit realistischen Beispieldaten, damit die App **ohne Keys sofort läuft** |
+| `ClaudeTrackingProvider` | **Alle Dienste einheitlich per KI**: Claude (Opus) recherchiert den Status per Web-Suche – bewusst ohne einzelne Carrier-APIs. Automatisch läuft das nur **1× täglich abends (ab 18 Uhr)** und nur für **noch nicht zugestellte** Pakete – so bleiben die Kosten minimal. Der ↻-Button in der App fragt jederzeit manuell ab. Anthropic-Key in den Einstellungen (Zahnrad) |
+| `DemoTrackingProvider` | Fallback mit realistischen Beispieldaten, damit die App **ohne Key sofort läuft** |
 
-Die Provider-Reihenfolge ist die Priorität: DHL-Pakete gehen über die
-DHL-API, alles andere über Claude (falls Key vorhanden), sonst Demo-Daten.
-Beide Keys werden in der App gespeichert (SharedPreferences), nicht im Code.
+Der Key wird in der App gespeichert (SharedPreferences), nicht im Code.
+Wer später doch direkte Carrier-APIs (DHL, UPS, FedEx – teils kostenlos)
+ergänzen will: einfach einen weiteren `TrackingProvider` implementieren und
+vor dem Claude-Provider registrieren.
 
 **Wichtig zu wissen:** Es gibt keine kostenlose "eine API für alles".
 Realistische Optionen für weitere Carrier:
@@ -147,7 +147,6 @@ worker/        RefreshWorker (stündliches Polling + Benachrichtigungen)
 
 ### Sinnvolle nächste Schritte
 
-- [ ] UPS-/FedEx-Provider (kostenlose Developer-Keys)
 - [ ] Barcode-Scanner zum Erfassen der Trackingnummer
 - [ ] Archiv für zugestellte Pakete
 - [ ] IMAP-Import für Nicht-Gmail-Postfächer

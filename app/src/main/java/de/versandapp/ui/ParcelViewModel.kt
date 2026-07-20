@@ -65,9 +65,8 @@ class ParcelViewModel(
 
     fun currentSettings(): AppSettings = settings.current()
 
-    fun saveSettings(anthropicApiKey: String, dhlApiKey: String) {
+    fun saveSettings(anthropicApiKey: String) {
         settings.anthropicApiKey = anthropicApiKey
-        settings.dhlApiKey = dhlApiKey
     }
 
     companion object {

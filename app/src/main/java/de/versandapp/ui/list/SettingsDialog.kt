@@ -19,17 +19,16 @@ import androidx.compose.ui.unit.dp
 import de.versandapp.data.settings.AppSettings
 
 /**
- * Einstellungen für die optionalen API-Keys. Beide Keys sind optional –
- * ohne sie läuft die App mit Demo-Daten bzw. dem lokalen Regex-Mail-Parser.
+ * Einstellungen für den Anthropic-API-Key. Optional – ohne Key läuft die App
+ * mit Demo-Daten bzw. dem lokalen Regex-Mail-Parser.
  */
 @Composable
 fun SettingsDialog(
     initial: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (anthropicApiKey: String, dhlApiKey: String) -> Unit,
+    onSave: (anthropicApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
-    var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -43,31 +42,19 @@ fun SettingsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    "Aktiviert die KI-Mail-Erkennung und das Web-Suche-Tracking " +
-                        "für Dienste ohne API (Hermes, DPD, GLS, Auslandspakete). " +
+                    "Aktiviert die KI-Mail-Erkennung und die Online-Statusabfrage " +
+                        "aller Sendungen per Web-Suche (automatisch 1× täglich abends " +
+                        "für offene Pakete, manuell jederzeit über ↻). " +
                         "Key erstellen: console.anthropic.com",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = dhlKey,
-                    onValueChange = { dhlKey = it },
-                    label = { Text("DHL API-Key") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    "Kostenloser Key für offizielle DHL-/Post-Trackingdaten: " +
-                        "developer.dhl.com",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey, dhlKey) }) { Text("Speichern") }
+            TextButton(onClick = { onSave(anthropicKey) }) { Text("Speichern") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Abbrechen") }
