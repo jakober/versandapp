@@ -144,9 +144,11 @@ fun ParcelListScreen(
         SettingsDialog(
             initial = viewModel.currentSettings(),
             testPushInitial = viewModel.testPushEnabled(),
+            notifyAlwaysInitial = viewModel.notifyAlways(),
             onDismiss = { showSettingsDialog = false },
             onTestNow = { viewModel.sendTestNotification() },
             onTestPushChange = { viewModel.setTestPush(it) },
+            onNotifyAlwaysChange = { viewModel.setNotifyAlways(it) },
             onSave = { anthropicKey, dhlKey, ship24Key ->
                 viewModel.saveSettings(anthropicKey, dhlKey, ship24Key)
                 showSettingsDialog = false

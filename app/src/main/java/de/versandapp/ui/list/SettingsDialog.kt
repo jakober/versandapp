@@ -34,15 +34,18 @@ import de.versandapp.data.settings.AppSettings
 fun SettingsDialog(
     initial: AppSettings,
     testPushInitial: Boolean,
+    notifyAlwaysInitial: Boolean,
     onDismiss: () -> Unit,
     onTestNow: () -> Unit,
     onTestPushChange: (Boolean) -> Unit,
+    onNotifyAlwaysChange: (Boolean) -> Unit,
     onSave: (anthropicApiKey: String, dhlApiKey: String, ship24ApiKey: String) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
     var ship24Key by remember { mutableStateOf(initial.ship24ApiKey) }
     var testPush by remember { mutableStateOf(testPushInitial) }
+    var notifyAlways by remember { mutableStateOf(notifyAlwaysInitial) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -97,6 +100,43 @@ fun SettingsDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Benachrichtigungen",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Immer benachrichtigen",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            if (notifyAlways)
+                                "Nach jedem automatischen Lauf – auch ohne Neuigkeiten. " +
+                                    "Nachts (22–6 Uhr) ist Ruhe."
+                            else
+                                "Nur bei echten Neuigkeiten (neue Sendung / " +
+                                    "Statusänderung). Nachts (22–6 Uhr) ist Ruhe.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = notifyAlways,
+                        onCheckedChange = {
+                            notifyAlways = it
+                            onNotifyAlwaysChange(it)
+                        },
+                    )
+                }
 
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()

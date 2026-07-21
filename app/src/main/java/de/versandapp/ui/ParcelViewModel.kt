@@ -148,6 +148,13 @@ class ParcelViewModel(
         settings.ship24ApiKey = ship24ApiKey
     }
 
+    fun notifyAlways(): Boolean = settings.notifyAlways
+
+    /** true = immer benachrichtigen, false = nur bei Neuigkeiten. */
+    fun setNotifyAlways(enabled: Boolean) {
+        settings.notifyAlways = enabled
+    }
+
     fun testPushEnabled(): Boolean = settings.testPushEnabled
 
     /** Schaltet den 2-Minuten-Test-Push an/aus (wirkt sofort). */

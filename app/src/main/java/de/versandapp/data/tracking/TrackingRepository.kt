@@ -174,16 +174,22 @@ class TrackingRepository(
     suspend fun trackedNumbers(): Set<String> =
         dao.getAll().map { it.trackingNumber }.toSet()
 
+    /** Ergebnis eines Hintergrundlaufs: geprüfte offene Pakete + geänderte. */
+    data class RefreshSummary(val checkedCount: Int, val changed: List<Parcel>)
+
     /**
-     * Aktualisiert alle Pakete (mit Drosselung) und liefert diejenigen zurück,
-     * deren Status sich geändert hat (für Benachrichtigungen aus dem Worker).
+     * Aktualisiert alle Pakete (mit Drosselung) und liefert eine Zusammenfassung:
+     * wie viele offene Pakete geprüft wurden und welche ihren Status geändert
+     * haben (für Benachrichtigungen aus dem Worker).
      */
-    suspend fun refreshAllAndDetectChanges(): List<Parcel> {
+    suspend fun refreshAllAndDetectChanges(): RefreshSummary {
+        val checkedCount = openParcels().size
         val statusBefore = dao.getAll().associate { it.id to it.status }
         refreshAll(force = false)
-        return dao.getAll().filter { parcel ->
+        val changed = dao.getAll().filter { parcel ->
             val before = statusBefore[parcel.id]
             before != null && before != parcel.status
         }
+        return RefreshSummary(checkedCount = checkedCount, changed = changed)
     }
 }

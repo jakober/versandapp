@@ -74,11 +74,30 @@ class MailImportWorker(
         // Ab jetzt nur noch Mails ab diesem Zeitpunkt berücksichtigen
         app.settings.lastMailImportEpochSeconds = System.currentTimeMillis() / 1000
 
-        if (imported > 0) notifyImported(imported)
+        // Nachts (22–6 Uhr) still bleiben.
+        if (RefreshWorker.isQuietHoursNow()) return Result.success()
+
+        // Bei Neuigkeiten immer melden; „nichts Neues" nur, wenn der Nutzer
+        // sich jede Prüfung bestätigen lassen will.
+        if (imported > 0) {
+            notifyImported(imported)
+        } else if (app.settings.notifyAlways) {
+            notifyNothingNew()
+        }
         return Result.success()
     }
 
     private fun notifyImported(count: Int) {
+        val text = if (count == 1) "1 neue Sendung aus Gmail importiert"
+        else "$count neue Sendungen aus Gmail importiert"
+        notify(text)
+    }
+
+    private fun notifyNothingNew() {
+        notify("Postfach geprüft – nichts Neues")
+    }
+
+    private fun notify(text: String) {
         val manager = NotificationManagerCompat.from(applicationContext)
         if (!manager.areNotificationsEnabled()) return
 
@@ -88,9 +107,6 @@ class MailImportWorker(
             Intent(applicationContext, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val text = if (count == 1) "1 neue Sendung aus Gmail importiert"
-        else "$count neue Sendungen aus Gmail importiert"
-
         val notification = NotificationCompat.Builder(applicationContext, RefreshWorker.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Mail-Import")

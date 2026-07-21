@@ -56,6 +56,15 @@ class SettingsRepository(context: Context) {
         get() = prefs.getBoolean(KEY_TEST_PUSH, false)
         set(value) = prefs.edit().putBoolean(KEY_TEST_PUSH, value).apply()
 
+    /**
+     * true = nach jedem Hintergrundlauf benachrichtigen (auch „nichts Neues"),
+     * false = nur bei echten Neuigkeiten. Nachts (22–6 Uhr) kommt in beiden
+     * Fällen keine Benachrichtigung.
+     */
+    var notifyAlways: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFY_ALWAYS, true)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIFY_ALWAYS, value).apply()
+
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
@@ -69,5 +78,6 @@ class SettingsRepository(context: Context) {
         const val KEY_GMAIL_LINKED = "gmail_linked"
         const val KEY_LAST_MAIL_IMPORT = "last_mail_import_epoch"
         const val KEY_TEST_PUSH = "test_push_enabled"
+        const val KEY_NOTIFY_ALWAYS = "notify_always"
     }
 }
