@@ -31,7 +31,7 @@ class ClaudeMailExtractor(
                 appendLine("--- Mail ${index + 1} ---")
                 appendLine("Von: ${mail.from}")
                 appendLine("Betreff: ${mail.subject}")
-                appendLine(mail.body.take(MAX_BODY_CHARS))
+                appendLine(trimBody(mail.body))
                 appendLine()
             }
         }
@@ -70,18 +70,48 @@ class ClaudeMailExtractor(
             .distinctBy { it.trackingNumber }
     }
 
+    /**
+     * Kürzt den Mail-Text fürs Modell – aber so, dass die „Links:"-Sektion am
+     * Ende (dort stehen die Trackingnummern aus den Buttons!) IMMER erhalten
+     * bleibt. Vorher wurde stumpf bei MAX_BODY_CHARS abgeschnitten, wodurch bei
+     * langen HTML-Mails (z. B. eBay) genau die Links wegfielen.
+     */
+    private fun trimBody(body: String): String {
+        val marker = "\n\nLinks:\n"
+        val markerIndex = body.indexOf(marker)
+        if (markerIndex < 0) return body.take(MAX_BODY_CHARS)
+
+        val visible = body.substring(0, markerIndex)
+        val links = body.substring(markerIndex) // inkl. Marker + URLs
+        val linksPart = links.take(MAX_LINKS_CHARS)
+        val visibleBudget = (MAX_BODY_CHARS - linksPart.length).coerceAtLeast(1500)
+        return visible.take(visibleBudget) + linksPart
+    }
+
     companion object {
         private const val MODEL = "claude-sonnet-5"
-        private const val MAX_MAILS = 50
-        private const val MAX_BODY_CHARS = 4000
+        private const val MAX_MAILS = 60
+        private const val MAX_BODY_CHARS = 6000
+        private const val MAX_LINKS_CHARS = 2500
 
         private val SYSTEM_PROMPT = """
             Du extrahierst Paket-Sendungen aus E-Mails für eine Tracking-App.
-            Du erhältst mehrere Mails (Versandbestätigungen, Zustellhinweise,
-            aber auch Newsletter/Werbung). Deine Aufgabe: JEDE echte Paket-
-            Sendung mit ihrer korrekten TRACKINGNUMMER erfassen. Verlässlichkeit
-            ist entscheidend – weder Sendungen auslassen noch falsche Nummern
-            eintragen.
+            Du erhältst ALLE Mails eines Zeitfensters – die meisten haben nichts
+            mit Versand zu tun (Newsletter, Rechnungen, Werbung, privat). Verlasse
+            dich NICHT auf den Absender: Versandhinweise kommen von beliebigen
+            Shops und Marktplätzen (Amazon, eBay, Kleinanzeigen, Etsy, kleine
+            Onlineshops, AliExpress, Temu …), teils vom Verkäufer persönlich.
+
+            LIES JEDE MAIL VOLLSTÄNDIG im Detail und entscheide: Geht es darum,
+            dass ein Paket/eine Bestellung VERSCHICKT wurde bzw. UNTERWEGS ist
+            oder ZUGESTELLT wird? Achte auf Formulierungen wie „versandt",
+            „verschickt", „unterwegs", „auf dem Weg", „shipped", „on its way",
+            „Sendung", „Zustellung", „in Zustellung". Wenn ja und eine
+            Trackingnummer auffindbar ist: erfassen.
+
+            Deine Aufgabe: JEDE echte Paket-Sendung mit ihrer korrekten
+            TRACKINGNUMMER erfassen. Verlässlichkeit ist entscheidend – weder
+            Sendungen auslassen noch falsche Nummern eintragen.
 
             SO FINDEST DU DIE RICHTIGE TRACKINGNUMMER (Priorität von oben nach unten):
 

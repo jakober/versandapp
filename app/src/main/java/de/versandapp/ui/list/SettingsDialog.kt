@@ -39,11 +39,19 @@ fun SettingsDialog(
     onTestNow: () -> Unit,
     onTestPushChange: (Boolean) -> Unit,
     onNotifyAlwaysChange: (Boolean) -> Unit,
-    onSave: (anthropicApiKey: String, dhlApiKey: String, ship24ApiKey: String) -> Unit,
+    onSave: (
+        anthropicApiKey: String,
+        dhlApiKey: String,
+        ship24ApiKey: String,
+        openAiApiKey: String,
+        openAiTrackingModel: String,
+    ) -> Unit,
 ) {
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
     var ship24Key by remember { mutableStateOf(initial.ship24ApiKey) }
+    var openAiKey by remember { mutableStateOf(initial.openAiApiKey) }
+    var openAiModel by remember { mutableStateOf(initial.openAiTrackingModel) }
     var testPush by remember { mutableStateOf(testPushInitial) }
     var notifyAlways by remember { mutableStateOf(notifyAlwaysInitial) }
 
@@ -97,6 +105,38 @@ fun SettingsDialog(
                         "wenn DHL-API und Online-Suche nichts gefunden haben – so " +
                         "bleibt das knappe Ship24-Kontingent geschont. Leer lassen, " +
                         "wenn du kein Ship24 nutzen willst.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = openAiKey,
+                    onValueChange = { openAiKey = it },
+                    label = { Text("OpenAI API-Key (ChatGPT)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Optional: fragt zusätzlich ChatGPT per Web-Suche nach dem " +
+                        "Status – als weitere Quelle, wenn DHL und Claude nichts " +
+                        "gefunden haben. Erhöht die Trefferchance. Key: " +
+                        "platform.openai.com",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = openAiModel,
+                    onValueChange = { openAiModel = it },
+                    label = { Text("OpenAI-Modell (Sendungssuche)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Schnelles Modell für die Online-Suche. Nur ändern, wenn der " +
+                        "vorgegebene Name in deinem OpenAI-Konto nicht existiert.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -188,7 +228,7 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(anthropicKey, dhlKey, ship24Key) }) {
+            TextButton(onClick = { onSave(anthropicKey, dhlKey, ship24Key, openAiKey, openAiModel) }) {
                 Text("Speichern")
             }
         },

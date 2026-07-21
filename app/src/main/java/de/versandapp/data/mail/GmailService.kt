@@ -37,15 +37,17 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
     suspend fun searchShipmentMails(
         accessToken: String,
         afterEpochSeconds: Long = 0L,
-        maxResults: Int = 50,
+        maxResults: Int = 60,
     ): List<MailMessage> =
         withContext(Dispatchers.IO) {
-            val timeFilter = if (afterEpochSeconds > 0L) {
+            // Bewusst KEIN Absender-/Betreff-Filter mehr: Es werden schlicht alle
+            // Mails im Zeitfenster geladen und danach von der KI im Volltext
+            // gelesen. Erster Scan: letzte 48 h; danach ab dem letzten Scan.
+            val query = if (afterEpochSeconds > 0L) {
                 "after:$afterEpochSeconds"
             } else {
-                "newer_than:1d"
+                "newer_than:2d"
             }
-            val query = "$timeFilter $SHIPMENT_QUERY"
             listMessageIds(accessToken, query, maxResults).mapNotNull { id ->
                 runCatching { getMessage(accessToken, id) }.getOrNull()
             }
@@ -138,21 +140,5 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
 
     companion object {
         const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
-
-        /**
-         * Bewusst breites Netz: alle bekannten Versand-Absender plus alle
-         * Betreffe rund um Lieferung/Zustellung. Das Zeitfenster wird davor
-         * gesetzt (24 h bzw. seit letztem Import). Falsch-Treffer (Newsletter
-         * etc.) sortiert die KI-Auswertung aus.
-         */
-        private const val SHIPMENT_QUERY =
-            "(" +
-                "from:(dhl OR deutschepost OR hermes OR myhermes OR dpd OR gls OR ups OR " +
-                "fedex OR amazon OR aliexpress OR temu OR shein OR cainiao OR yanwen OR " +
-                "shipment OR versand OR noreply-lieferung) OR " +
-                "subject:(Sendung OR Sendungsverfolgung OR Sendungsnummer OR Trackingnummer OR " +
-                "Zustellung OR Lieferung OR geliefert OR Paket OR versandt OR verschickt OR " +
-                "unterwegs OR tracking OR shipped OR shipping OR delivery OR parcel)" +
-                ")"
     }
 }

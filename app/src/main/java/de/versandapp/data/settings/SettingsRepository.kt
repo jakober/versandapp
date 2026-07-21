@@ -6,6 +6,8 @@ data class AppSettings(
     val anthropicApiKey: String,
     val dhlApiKey: String,
     val ship24ApiKey: String,
+    val openAiApiKey: String,
+    val openAiTrackingModel: String,
 )
 
 /**
@@ -33,6 +35,21 @@ class SettingsRepository(context: Context) {
     var ship24ApiKey: String
         get() = prefs.getString(KEY_SHIP24, "") ?: ""
         set(value) = prefs.edit().putString(KEY_SHIP24, value.trim()).apply()
+
+    /**
+     * Key von platform.openai.com. Ist er gesetzt, fragt zusätzlich ChatGPT
+     * (OpenAI) den Sendungsstatus per Web-Suche ab – als weitere Quelle in der
+     * Kette, wenn DHL-API und Claude nichts gefunden haben.
+     */
+    var openAiApiKey: String
+        get() = prefs.getString(KEY_OPENAI, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_OPENAI, value.trim()).apply()
+
+    /** Schnelles OpenAI-Modell für die Online-Sendungssuche (anpassbar). */
+    var openAiTrackingModel: String
+        get() = prefs.getString(KEY_OPENAI_TRACK_MODEL, DEFAULT_TRACK_MODEL)
+            ?.takeIf { it.isNotBlank() } ?: DEFAULT_TRACK_MODEL
+        set(value) = prefs.edit().putString(KEY_OPENAI_TRACK_MODEL, value.trim()).apply()
 
     /**
      * Merkt sich, dass der Nutzer Gmail bereits verknüpft hat – dann verbindet
@@ -69,15 +86,23 @@ class SettingsRepository(context: Context) {
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
         ship24ApiKey = ship24ApiKey,
+        openAiApiKey = openAiApiKey,
+        openAiTrackingModel = openAiTrackingModel,
     )
 
     private companion object {
         const val KEY_ANTHROPIC = "anthropic_api_key"
         const val KEY_DHL = "dhl_api_key"
         const val KEY_SHIP24 = "ship24_api_key"
+        const val KEY_OPENAI = "openai_api_key"
+        const val KEY_OPENAI_TRACK_MODEL = "openai_tracking_model"
         const val KEY_GMAIL_LINKED = "gmail_linked"
         const val KEY_LAST_MAIL_IMPORT = "last_mail_import_epoch"
         const val KEY_TEST_PUSH = "test_push_enabled"
         const val KEY_NOTIFY_ALWAYS = "notify_always"
+
+        // Vorbelegtes Modell – in den Einstellungen anpassbar, falls der Name
+        // im OpenAI-Konto abweicht.
+        const val DEFAULT_TRACK_MODEL = "gpt-5.4-mini"
     }
 }

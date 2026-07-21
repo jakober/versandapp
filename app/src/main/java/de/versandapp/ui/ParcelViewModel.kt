@@ -142,10 +142,18 @@ class ParcelViewModel(
 
     fun currentSettings(): AppSettings = settings.current()
 
-    fun saveSettings(anthropicApiKey: String, dhlApiKey: String, ship24ApiKey: String) {
+    fun saveSettings(
+        anthropicApiKey: String,
+        dhlApiKey: String,
+        ship24ApiKey: String,
+        openAiApiKey: String,
+        openAiTrackingModel: String,
+    ) {
         settings.anthropicApiKey = anthropicApiKey
         settings.dhlApiKey = dhlApiKey
         settings.ship24ApiKey = ship24ApiKey
+        settings.openAiApiKey = openAiApiKey
+        settings.openAiTrackingModel = openAiTrackingModel
     }
 
     fun notifyAlways(): Boolean = settings.notifyAlways

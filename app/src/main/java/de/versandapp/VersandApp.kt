@@ -12,6 +12,7 @@ import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.ClaudeTrackingProvider
 import de.versandapp.data.tracking.DemoTrackingProvider
 import de.versandapp.data.tracking.DhlTrackingProvider
+import de.versandapp.data.tracking.OpenAiTrackingProvider
 import de.versandapp.data.tracking.Ship24Provider
 import de.versandapp.data.tracking.TrackingProvider
 import de.versandapp.data.tracking.TrackingRepository
@@ -71,13 +72,17 @@ class VersandApp : Application() {
      * verlässliche Daten liefert:
      * 1. DHL-API (kostenlos, zuverlässigste Quelle) – nur für DHL/Post
      * 2. Claude-Online-Suche für alle Dienste (inkl. China) – kostenlos/günstig
-     * 3. Ship24-API als kostenpflichtiger Notnagel – nur wenn 1+2 nichts fanden
-     * 4. Demo-Daten, nur wenn gar kein Key hinterlegt ist (App läuft sofort)
+     * 3. OpenAI-/ChatGPT-Online-Suche als zusätzliche Quelle (wenn Key gesetzt)
+     * 4. Ship24-API als kostenpflichtiger Notnagel – nur wenn 1–3 nichts fanden
+     * 5. Demo-Daten, nur wenn gar kein Key hinterlegt ist (App läuft sofort)
      */
     private fun buildProviders(): List<TrackingProvider> = buildList {
         val current = settings.current()
         if (current.dhlApiKey.isNotBlank()) add(DhlTrackingProvider(current.dhlApiKey))
         if (current.anthropicApiKey.isNotBlank()) add(ClaudeTrackingProvider(current.anthropicApiKey))
+        if (current.openAiApiKey.isNotBlank()) {
+            add(OpenAiTrackingProvider(current.openAiApiKey, current.openAiTrackingModel))
+        }
         if (current.ship24ApiKey.isNotBlank()) add(Ship24Provider(current.ship24ApiKey))
         if (isEmpty()) add(DemoTrackingProvider())
     }
