@@ -17,6 +17,7 @@ import de.versandapp.data.tracking.TrackingProvider
 import de.versandapp.data.tracking.TrackingRepository
 import de.versandapp.worker.MailImportWorker
 import de.versandapp.worker.RefreshWorker
+import de.versandapp.worker.TestNotificationWorker
 import java.util.concurrent.TimeUnit
 
 /**
@@ -49,7 +50,19 @@ class VersandApp : Application() {
         RefreshWorker.ensureChannel(this)
         scheduleBackgroundRefresh()
         scheduleMailImport()
+        // Test-Push-Takt nach Neustart wieder aufnehmen, falls eingeschaltet.
+        if (settings.testPushEnabled) TestNotificationWorker.schedule(this, delayMinutes = 2)
     }
+
+    /** Schaltet den 2-Minuten-Test-Push an oder aus (aus den Einstellungen). */
+    fun setTestPush(enabled: Boolean) {
+        settings.testPushEnabled = enabled
+        if (enabled) TestNotificationWorker.schedule(this, delayMinutes = 0)
+        else TestNotificationWorker.cancel(this)
+    }
+
+    /** Feuert sofort eine einzelne Test-Push (für den „Jetzt testen"-Knopf). */
+    fun sendTestNotificationNow() = TestNotificationWorker.showTestNotification(this)
 
     /**
      * Provider-Kette, bei jeder Aktualisierung neu aufgebaut (Keys aus den

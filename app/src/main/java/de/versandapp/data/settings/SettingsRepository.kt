@@ -51,6 +51,11 @@ class SettingsRepository(context: Context) {
         get() = prefs.getLong(KEY_LAST_MAIL_IMPORT, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_MAIL_IMPORT, value).apply()
 
+    /** Testmodus: schickt alle ~2 Minuten eine Test-Push (zum Prüfen). */
+    var testPushEnabled: Boolean
+        get() = prefs.getBoolean(KEY_TEST_PUSH, false)
+        set(value) = prefs.edit().putBoolean(KEY_TEST_PUSH, value).apply()
+
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
@@ -63,5 +68,6 @@ class SettingsRepository(context: Context) {
         const val KEY_SHIP24 = "ship24_api_key"
         const val KEY_GMAIL_LINKED = "gmail_linked"
         const val KEY_LAST_MAIL_IMPORT = "last_mail_import_epoch"
+        const val KEY_TEST_PUSH = "test_push_enabled"
     }
 }

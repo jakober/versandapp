@@ -46,6 +46,7 @@ data class RefreshProgress(
 class ParcelViewModel(
     private val repository: TrackingRepository,
     private val settings: SettingsRepository,
+    private val app: VersandApp,
 ) : ViewModel() {
 
     val parcels: StateFlow<List<ParcelWithEvents>> = repository.observeParcels()
@@ -147,11 +148,19 @@ class ParcelViewModel(
         settings.ship24ApiKey = ship24ApiKey
     }
 
+    fun testPushEnabled(): Boolean = settings.testPushEnabled
+
+    /** Schaltet den 2-Minuten-Test-Push an/aus (wirkt sofort). */
+    fun setTestPush(enabled: Boolean) = app.setTestPush(enabled)
+
+    /** Feuert sofort eine einzelne Test-Push zum Prüfen der Pipeline. */
+    fun sendTestNotification() = app.sendTestNotificationNow()
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = checkNotNull(this[APPLICATION_KEY]) as VersandApp
-                ParcelViewModel(app.repository, app.settings)
+                ParcelViewModel(app.repository, app.settings, app)
             }
         }
     }
