@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import de.versandapp.data.model.ParcelStatus
 import de.versandapp.data.model.TrackingEvent
 import de.versandapp.ui.ParcelViewModel
 import de.versandapp.ui.components.CarrierBadge
@@ -141,6 +142,16 @@ fun ParcelDetailScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                             StatusChip(status = parcel.status)
+                            val estimated = parcel.estimatedDelivery
+                            if (estimated != null && parcel.status != ParcelStatus.DELIVERED) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Zustellung vsl. " + DateFormat.getDateInstance(DateFormat.MEDIUM)
+                                        .format(Date(estimated)),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
                             if (refreshStep != null) {
                                 Spacer(Modifier.height(8.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {

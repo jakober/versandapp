@@ -26,6 +26,8 @@ data class Parcel(
     val status: ParcelStatus = ParcelStatus.UNKNOWN,
     val createdAt: Long = System.currentTimeMillis(),
     val lastUpdated: Long? = null,
+    /** Voraussichtliches Zustelldatum (Unix-ms), falls die Quelle es liefert. */
+    val estimatedDelivery: Long? = null,
 )
 
 @Entity(

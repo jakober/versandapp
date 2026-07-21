@@ -101,8 +101,11 @@ class Ship24Provider(
             ?.firstOrNull()?.jsonObject
             ?: throw TrackingException("Keine Trackingdaten von Ship24 erhalten")
 
-        val milestone = tracking["shipment"]?.jsonObject
-            ?.get("statusMilestone")?.jsonPrimitive?.content
+        val shipment = tracking["shipment"]?.jsonObject
+        val milestone = shipment?.get("statusMilestone")?.jsonPrimitive?.content
+        val estimated = shipment?.get("delivery")?.jsonObject
+            ?.get("estimatedDeliveryDate")?.jsonPrimitive?.contentOrNull
+            ?.let { parseTimestamp(it) }
 
         val events = tracking["events"]?.jsonArray.orEmpty().mapNotNull { element ->
             val event = element.jsonObject
@@ -123,7 +126,11 @@ class Ship24Provider(
             )
         }
 
-        return TrackingResult(status = mapMilestone(milestone), events = events)
+        return TrackingResult(
+            status = mapMilestone(milestone),
+            events = events,
+            estimatedDelivery = estimated,
+        )
     }
 
     private fun mapMilestone(milestone: String?): ParcelStatus = when (milestone) {

@@ -153,8 +153,15 @@ class TrackingRepository(
             parcel.copy(
                 status = result.status,
                 lastUpdated = System.currentTimeMillis(),
+                // Nur überschreiben, wenn die Quelle ein Datum lieferte, sonst altes behalten.
+                estimatedDelivery = result.estimatedDelivery ?: parcel.estimatedDelivery,
             )
         )
+    }
+
+    /** Ändert Label und Carrier eines Pakets (z. B. nach Korrektur durch den Nutzer). */
+    suspend fun updateParcel(parcel: Parcel, label: String?, carrier: Carrier) {
+        dao.update(parcel.copy(label = label?.takeIf { it.isNotBlank() }, carrier = carrier))
     }
 
     /** Alle noch nicht zugestellten Pakete (Reihenfolge wie in der Liste). */

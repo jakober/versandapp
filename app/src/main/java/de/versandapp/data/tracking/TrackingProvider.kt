@@ -17,6 +17,8 @@ data class TrackingUpdate(
 data class TrackingResult(
     val status: ParcelStatus,
     val events: List<TrackingUpdate>,
+    /** Voraussichtliches Zustelldatum (Unix-ms), falls die Quelle es liefert. */
+    val estimatedDelivery: Long? = null,
 )
 
 /**

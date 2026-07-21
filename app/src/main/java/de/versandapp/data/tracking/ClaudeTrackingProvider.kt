@@ -4,6 +4,7 @@ import de.versandapp.data.ai.ClaudeApi
 import de.versandapp.data.ai.ClaudeException
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.ParcelStatus
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
@@ -142,7 +143,9 @@ class ClaudeTrackingProvider(
             )
         }.sortedBy { it.timestamp }
 
-        return TrackingResult(status = status, events = events)
+        val estimated = parseDeliveryDate(root["estimated_delivery"]?.jsonPrimitive?.content)
+
+        return TrackingResult(status = status, events = events, estimatedDelivery = estimated)
     }
 
     private fun parseTimestamp(value: String?): Long {
@@ -152,6 +155,19 @@ class ClaudeTrackingProvider(
             return LocalDateTime.parse(value).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         }
         return System.currentTimeMillis()
+    }
+
+    /** Wie [parseTimestamp], aber null (statt „jetzt") bei fehlendem/ungültigem Wert; akzeptiert auch reine Datumsangaben. */
+    private fun parseDeliveryDate(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        runCatching { return OffsetDateTime.parse(value).toInstant().toEpochMilli() }
+        runCatching {
+            return LocalDateTime.parse(value).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }
+        runCatching {
+            return LocalDate.parse(value).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }
+        return null
     }
 
     companion object {
@@ -174,10 +190,14 @@ class ClaudeTrackingProvider(
             {
               "found": true,
               "status": "REGISTERED|IN_TRANSIT|OUT_FOR_DELIVERY|DELIVERED|FAILED|UNKNOWN",
+              "estimated_delivery": "ISO-Datum (z. B. 2026-07-25) oder leer",
               "events": [
                 {"timestamp": "ISO-8601 oder leer", "description": "…", "location": "… oder leer"}
               ]
             }
+
+            estimated_delivery nur setzen, wenn ein voraussichtliches Zustelldatum
+            genannt ist; sonst leer lassen.
 
             Regeln:
             - Rufe zuerst die mitgelieferten URLs direkt ab (web_fetch). Die

@@ -309,6 +309,18 @@ private fun ParcelCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                val estimated = parcel.estimatedDelivery
+                if (estimated != null && parcel.status != ParcelStatus.DELIVERED) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Zustellung vsl. " +
+                            DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(estimated)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (refreshStep != null) {
                     Spacer(Modifier.height(4.dp))
                     Text(

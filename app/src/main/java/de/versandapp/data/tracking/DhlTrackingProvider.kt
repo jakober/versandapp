@@ -76,16 +76,23 @@ class DhlTrackingProvider(
         val statusCode = shipment["status"]?.jsonObject
             ?.get("statusCode")?.jsonPrimitive?.content
 
+        val estimated = shipment["estimatedTimeOfDelivery"]?.jsonPrimitive?.content
+            ?.let { parseTimestampOrNull(it) }
+
         return TrackingResult(
             status = mapStatus(statusCode),
             events = events,
+            estimatedDelivery = estimated,
         )
     }
 
-    private fun parseTimestamp(value: String): Long = try {
+    private fun parseTimestamp(value: String): Long =
+        parseTimestampOrNull(value) ?: System.currentTimeMillis()
+
+    private fun parseTimestampOrNull(value: String): Long? = try {
         OffsetDateTime.parse(value).toInstant().toEpochMilli()
     } catch (_: Exception) {
-        System.currentTimeMillis()
+        null
     }
 
     private fun mapStatus(statusCode: String?): ParcelStatus = when (statusCode) {
