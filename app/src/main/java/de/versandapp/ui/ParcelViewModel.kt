@@ -84,6 +84,13 @@ class ParcelViewModel(
         }
     }
 
+    /** Ändert Name (Label) und Carrier eines Pakets. */
+    fun updateParcel(parcel: Parcel, label: String?, carrier: Carrier) {
+        viewModelScope.launch {
+            repository.updateParcel(parcel, label, carrier)
+        }
+    }
+
     /**
      * Manuelle Online-Prüfung aller offenen Sendungen mit Live-Fortschritt:
      * Sendungen werden nacheinander geprüft, der Dialog zeigt jeweils, welche
@@ -199,6 +206,12 @@ class ParcelViewModel(
     /** true = immer benachrichtigen, false = nur bei Neuigkeiten. */
     fun setNotifyAlways(enabled: Boolean) {
         settings.notifyAlways = enabled
+    }
+
+    fun archiveAfterDays(): Int = settings.archiveAfterDays
+
+    fun setArchiveAfterDays(days: Int) {
+        settings.archiveAfterDays = days
     }
 
     fun testPushEnabled(): Boolean = settings.testPushEnabled

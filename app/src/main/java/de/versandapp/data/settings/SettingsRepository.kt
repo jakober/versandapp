@@ -82,6 +82,11 @@ class SettingsRepository(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFY_ALWAYS, true)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFY_ALWAYS, value).apply()
 
+    /** Zugestellte Pakete nach so vielen Tagen ins Archiv verschieben (Default 14). */
+    var archiveAfterDays: Int
+        get() = prefs.getInt(KEY_ARCHIVE_DAYS, 14)
+        set(value) = prefs.edit().putInt(KEY_ARCHIVE_DAYS, value.coerceAtLeast(1)).apply()
+
     fun current(): AppSettings = AppSettings(
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
@@ -100,6 +105,7 @@ class SettingsRepository(context: Context) {
         const val KEY_LAST_MAIL_IMPORT = "last_mail_import_epoch"
         const val KEY_TEST_PUSH = "test_push_enabled"
         const val KEY_NOTIFY_ALWAYS = "notify_always"
+        const val KEY_ARCHIVE_DAYS = "archive_after_days"
 
         // Vorbelegtes Modell – in den Einstellungen anpassbar, falls der Name
         // im OpenAI-Konto abweicht.

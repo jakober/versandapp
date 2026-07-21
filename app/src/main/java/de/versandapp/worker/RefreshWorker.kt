@@ -84,7 +84,10 @@ class RefreshWorker(
         val openApp = PendingIntent.getActivity(
             applicationContext,
             parcel.id.toInt(),
-            Intent(applicationContext, MainActivity::class.java),
+            Intent(applicationContext, MainActivity::class.java).apply {
+                putExtra(MainActivity.EXTRA_PARCEL_ID, parcel.id)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 

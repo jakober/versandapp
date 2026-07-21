@@ -19,9 +19,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +39,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -53,6 +61,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.versandapp.data.model.ParcelStatus
+import de.versandapp.data.model.Parcel
 import de.versandapp.data.model.ParcelWithEvents
 import de.versandapp.ui.ParcelViewModel
 import de.versandapp.ui.components.CarrierBadge
@@ -73,6 +82,11 @@ fun ParcelListScreen(
     val refreshProgress by viewModel.refreshProgress.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var searchActive by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var parcelToDelete by remember { mutableStateOf<Parcel?>(null) }
+    var archiveExpanded by remember { mutableStateOf(false) }
+    val archiveDays = viewModel.archiveAfterDays()
 
     // Pull-to-Refresh: nach unten ziehen löst dieselbe Aktualisierung aus wie
     // das ↻-Icon. Beim Erreichen der Auslöse-Schwelle vibriert das Gerät kurz.
@@ -93,22 +107,43 @@ fun ParcelListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Meine Pakete") },
-                actions = {
-                    IconButton(onClick = onImportClick) {
-                        Icon(Icons.Filled.MarkEmailRead, contentDescription = "Aus Postfach importieren")
-                    }
-                    IconButton(onClick = { showSettingsDialog = true }) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Einstellungen")
-                    }
-                    if (isRefreshing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(end = 16.dp).width(24.dp).height(24.dp),
-                            strokeWidth = 2.dp,
+                title = {
+                    if (searchActive) {
+                        TextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            placeholder = { Text("Suchen …") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
-                        IconButton(onClick = { viewModel.refreshAll() }) {
-                            Icon(Icons.Filled.Refresh, contentDescription = "Alle aktualisieren")
+                        Text("Meine Pakete")
+                    }
+                },
+                actions = {
+                    if (searchActive) {
+                        IconButton(onClick = { searchActive = false; query = "" }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Suche schließen")
+                        }
+                    } else {
+                        IconButton(onClick = { searchActive = true }) {
+                            Icon(Icons.Filled.Search, contentDescription = "Suchen")
+                        }
+                        IconButton(onClick = onImportClick) {
+                            Icon(Icons.Filled.MarkEmailRead, contentDescription = "Aus Postfach importieren")
+                        }
+                        IconButton(onClick = { showSettingsDialog = true }) {
+                            Icon(Icons.Filled.Settings, contentDescription = "Einstellungen")
+                        }
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = 16.dp).width(24.dp).height(24.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            IconButton(onClick = { viewModel.refreshAll() }) {
+                                Icon(Icons.Filled.Refresh, contentDescription = "Alle aktualisieren")
+                            }
                         }
                     }
                 },
@@ -129,25 +164,50 @@ fun ParcelListScreen(
             if (parcels.isEmpty()) {
                 EmptyState(Modifier.fillMaxSize())
             } else {
-                // Offene Sendungen (neueste zuerst) oben, zugestellte in einem
-                // eigenen Abschnitt darunter.
-                val (delivered, open) = parcels.partition {
-                    it.parcel.status == ParcelStatus.DELIVERED
+                // Filtern nach Suchbegriff (Nummer, Name, Dienst).
+                val filtered = if (query.isBlank()) parcels else parcels.filter {
+                    val p = it.parcel
+                    val q = query.trim()
+                    p.trackingNumber.contains(q, ignoreCase = true) ||
+                        (p.label?.contains(q, ignoreCase = true) == true) ||
+                        p.carrier.displayName.contains(q, ignoreCase = true)
                 }
+
+                // Aufteilen in offen / kürzlich zugestellt / Archiv (alt zugestellt).
+                val now = System.currentTimeMillis()
+                val archiveMs = archiveDays.toLong() * 24L * 60L * 60L * 1000L
+                val open = filtered.filter { it.parcel.status != ParcelStatus.DELIVERED }
+                val deliveredAll = filtered.filter { it.parcel.status == ParcelStatus.DELIVERED }
+                val archived = deliveredAll.filter {
+                    val lu = it.parcel.lastUpdated
+                    lu != null && now - lu > archiveMs
+                }
+                val deliveredRecent = deliveredAll.filterNot { it in archived }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (open.isEmpty() && deliveredRecent.isEmpty() && archived.isEmpty()) {
+                        item(key = "no_results") {
+                            Text(
+                                "Keine Treffer.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     items(open, key = { it.parcel.id }) { item ->
                         SwipeableParcelCard(
                             item = item,
                             refreshStep = refreshSteps[item.parcel.id],
                             onRefresh = { viewModel.refresh(item.parcel.id) },
+                            onDelete = { parcelToDelete = item.parcel },
                             onClick = { onParcelClick(item.parcel.id) },
                         )
                     }
-                    if (delivered.isNotEmpty()) {
+                    if (deliveredRecent.isNotEmpty()) {
                         item(key = "delivered_header") {
                             Text(
                                 "Zugestellt",
@@ -156,13 +216,48 @@ fun ParcelListScreen(
                                 modifier = Modifier.padding(top = 8.dp),
                             )
                         }
-                        items(delivered, key = { it.parcel.id }) { item ->
+                        items(deliveredRecent, key = { it.parcel.id }) { item ->
                             SwipeableParcelCard(
                                 item = item,
                                 refreshStep = refreshSteps[item.parcel.id],
                                 onRefresh = { viewModel.refresh(item.parcel.id) },
+                                onDelete = { parcelToDelete = item.parcel },
                                 onClick = { onParcelClick(item.parcel.id) },
                             )
+                        }
+                    }
+                    if (archived.isNotEmpty()) {
+                        item(key = "archive_header") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { archiveExpanded = !archiveExpanded }
+                                    .padding(top = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    "Archiv (${archived.size})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Icon(
+                                    if (archiveExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        if (archiveExpanded) {
+                            items(archived, key = { it.parcel.id }) { item ->
+                                SwipeableParcelCard(
+                                    item = item,
+                                    refreshStep = refreshSteps[item.parcel.id],
+                                    onRefresh = { viewModel.refresh(item.parcel.id) },
+                                    onDelete = { parcelToDelete = item.parcel },
+                                    onClick = { onParcelClick(item.parcel.id) },
+                                )
+                            }
                         }
                     }
                 }
@@ -176,6 +271,23 @@ fun ParcelListScreen(
             onConfirm = { trackingNumber, carrier, label ->
                 viewModel.addParcel(trackingNumber, carrier, label)
                 showAddDialog = false
+            },
+        )
+    }
+
+    parcelToDelete?.let { parcel ->
+        AlertDialog(
+            onDismissRequest = { parcelToDelete = null },
+            title = { Text("Paket löschen?") },
+            text = { Text(parcel.label ?: parcel.trackingNumber) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteParcel(parcel)
+                    parcelToDelete = null
+                }) { Text("Löschen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { parcelToDelete = null }) { Text("Abbrechen") }
             },
         )
     }
@@ -232,16 +344,24 @@ private fun SwipeableParcelCard(
     item: ParcelWithEvents,
     refreshStep: String?,
     onRefresh: () -> Unit,
+    onDelete: () -> Unit,
     onClick: () -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.StartToEnd) {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onRefresh()
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onRefresh()
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onDelete()
+                }
+                SwipeToDismissBoxValue.Settled -> {}
             }
-            false // nie wirklich „wegwischen" – immer zurückschnappen
+            false // nie wirklich „wegwischen" – immer zurückschnappen (Löschen fragt separat nach)
         },
     )
     // Sicherheitsnetz: falls die Box doch mal nicht auf Settled steht, zurücksetzen.
@@ -254,21 +374,33 @@ private fun SwipeableParcelCard(
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = true,
-        enableDismissFromEndToStart = false,
+        enableDismissFromEndToStart = true,
         backgroundContent = {
+            // Rechts-Wisch = Aktualisieren (blau, links), Links-Wisch = Löschen (rot, rechts).
+            val isDelete = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+            val bgColor = if (isDelete) MaterialTheme.colorScheme.errorContainer
+                else MaterialTheme.colorScheme.primaryContainer
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .padding(start = 24.dp),
-                contentAlignment = Alignment.CenterStart,
+                    .background(bgColor)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = if (isDelete) Alignment.CenterEnd else Alignment.CenterStart,
             ) {
-                Icon(
-                    Icons.Filled.Refresh,
-                    contentDescription = "Aktualisieren",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+                if (isDelete) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "Löschen",
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Refresh,
+                        contentDescription = "Aktualisieren",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
             }
         },
     ) {

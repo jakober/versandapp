@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,7 +36,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +66,7 @@ fun ParcelDetailScreen(
     val item by itemFlow.collectAsState(initial = null)
     val refreshSteps by viewModel.refreshSteps.collectAsState()
     val context = LocalContext.current
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -82,6 +86,11 @@ fun ParcelDetailScreen(
                 actions = {
                     IconButton(onClick = { viewModel.refresh(parcelId) }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Aktualisieren")
+                    }
+                    if (item != null) {
+                        IconButton(onClick = { showEditDialog = true }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Bearbeiten")
+                        }
                     }
                     IconButton(onClick = {
                         item?.parcel?.let {
@@ -206,6 +215,19 @@ fun ParcelDetailScreen(
                     EventRow(event = event, isLatest = event == events.first())
                 }
             }
+        }
+
+        if (showEditDialog) {
+            EditParcelDialog(
+                trackingNumber = parcel.trackingNumber,
+                initialLabel = parcel.label,
+                initialCarrier = parcel.carrier,
+                onDismiss = { showEditDialog = false },
+                onConfirm = { label, carrier ->
+                    viewModel.updateParcel(parcel, label, carrier)
+                    showEditDialog = false
+                },
+            )
         }
     }
 }

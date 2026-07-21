@@ -1,6 +1,7 @@
 package de.versandapp.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,23 +29,52 @@ import de.versandapp.ui.mailimport.MailImportViewModel
 import de.versandapp.ui.theme.VersandAppTheme
 
 class MainActivity : ComponentActivity() {
+
+    // ID des Pakets, das aus einer Benachrichtigung heraus geöffnet werden soll.
+    private val pendingParcelId = mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingParcelId.value = readParcelId(intent)
         enableEdgeToEdge()
         setContent {
             VersandAppTheme {
-                VersandAppNavHost()
+                VersandAppNavHost(pendingParcelId)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingParcelId.value = readParcelId(intent)
+    }
+
+    private fun readParcelId(intent: Intent?): Long? {
+        val id = intent?.getLongExtra(EXTRA_PARCEL_ID, -1L) ?: -1L
+        return id.takeIf { it > 0 }
+    }
+
+    companion object {
+        const val EXTRA_PARCEL_ID = "parcelId"
     }
 }
 
 @Composable
-private fun VersandAppNavHost() {
+private fun VersandAppNavHost(pendingParcelId: MutableState<Long?>) {
     val navController = rememberNavController()
     val viewModel: ParcelViewModel = viewModel(factory = ParcelViewModel.Factory)
 
     NotificationPermissionRequest()
+
+    // Auf eine aus der Benachrichtigung übergebene Paket-ID reagieren (Deep-Link).
+    LaunchedEffect(pendingParcelId.value) {
+        val id = pendingParcelId.value
+        if (id != null) {
+            navController.navigate("detail/$id")
+            pendingParcelId.value = null
+        }
+    }
 
     NavHost(navController = navController, startDestination = "list") {
         composable("list") {
