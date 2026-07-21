@@ -26,6 +26,7 @@ import de.versandapp.ui.detail.ParcelDetailScreen
 import de.versandapp.ui.list.ParcelListScreen
 import de.versandapp.ui.mailimport.MailImportScreen
 import de.versandapp.ui.mailimport.MailImportViewModel
+import de.versandapp.ui.settings.SettingsScreen
 import de.versandapp.ui.theme.VersandAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -82,7 +83,11 @@ private fun VersandAppNavHost(pendingParcelId: MutableState<Long?>) {
                 viewModel = viewModel,
                 onParcelClick = { id -> navController.navigate("detail/$id") },
                 onImportClick = { navController.navigate("import") },
+                onSettingsClick = { navController.navigate("settings") },
             )
+        }
+        composable("settings") {
+            SettingsScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
         }
         composable("import") {
             val importViewModel: MailImportViewModel = viewModel(factory = MailImportViewModel.Factory)

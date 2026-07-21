@@ -75,13 +75,13 @@ fun ParcelListScreen(
     viewModel: ParcelViewModel,
     onParcelClick: (Long) -> Unit,
     onImportClick: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     val parcels by viewModel.parcels.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val refreshSteps by viewModel.refreshSteps.collectAsState()
     val refreshProgress by viewModel.refreshProgress.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
     var searchActive by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var parcelToDelete by remember { mutableStateOf<Parcel?>(null) }
@@ -132,7 +132,7 @@ fun ParcelListScreen(
                         IconButton(onClick = onImportClick) {
                             Icon(Icons.Filled.MarkEmailRead, contentDescription = "Aus Postfach importieren")
                         }
-                        IconButton(onClick = { showSettingsDialog = true }) {
+                        IconButton(onClick = onSettingsClick) {
                             Icon(Icons.Filled.Settings, contentDescription = "Einstellungen")
                         }
                         if (isRefreshing) {
@@ -296,22 +296,6 @@ fun ParcelListScreen(
         RefreshProgressDialog(
             progress = progress,
             onDismiss = { viewModel.dismissRefreshProgress() },
-        )
-    }
-
-    if (showSettingsDialog) {
-        SettingsDialog(
-            initial = viewModel.currentSettings(),
-            testPushInitial = viewModel.testPushEnabled(),
-            notifyAlwaysInitial = viewModel.notifyAlways(),
-            onDismiss = { showSettingsDialog = false },
-            onTestNow = { viewModel.sendTestNotification() },
-            onTestPushChange = { viewModel.setTestPush(it) },
-            onNotifyAlwaysChange = { viewModel.setNotifyAlways(it) },
-            onSave = { anthropicKey, dhlKey, ship24Key, openAiKey, openAiModel ->
-                viewModel.saveSettings(anthropicKey, dhlKey, ship24Key, openAiKey, openAiModel)
-                showSettingsDialog = false
-            },
         )
     }
 }

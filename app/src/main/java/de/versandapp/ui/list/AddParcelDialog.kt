@@ -6,10 +6,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -19,8 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import de.versandapp.data.carrier.CarrierDetector
 import de.versandapp.data.model.Carrier
 
@@ -36,6 +44,7 @@ fun AddParcelDialog(
     var trackingNumber by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
     var manualCarrier by remember { mutableStateOf<Carrier?>(null) }
+    val context = LocalContext.current
 
     val normalized = CarrierDetector.normalize(trackingNumber)
     val suggestions = CarrierDetector.detect(normalized)
@@ -47,16 +56,30 @@ fun AddParcelDialog(
         title = { Text("Paket hinzufügen") },
         text = {
             Column {
-                OutlinedTextField(
-                    value = trackingNumber,
-                    onValueChange = {
-                        trackingNumber = it
-                        manualCarrier = null
-                    },
-                    label = { Text("Trackingnummer") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = trackingNumber,
+                        onValueChange = {
+                            trackingNumber = it
+                            manualCarrier = null
+                        },
+                        label = { Text("Trackingnummer") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = {
+                        GmsBarcodeScanning.getClient(context).startScan()
+                            .addOnSuccessListener { barcode ->
+                                barcode.rawValue?.let {
+                                    trackingNumber = it
+                                    manualCarrier = null
+                                }
+                            }
+                    }) {
+                        Icon(Icons.Filled.QrCodeScanner, contentDescription = "Barcode scannen")
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = label,
