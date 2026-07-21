@@ -1,5 +1,6 @@
 package de.versandapp.ui.list
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -27,10 +30,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +69,7 @@ fun ParcelListScreen(
 ) {
     val parcels by viewModel.parcels.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val refreshingIds by viewModel.refreshingIds.collectAsState()
     val refreshProgress by viewModel.refreshProgress.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -132,7 +140,12 @@ fun ParcelListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(open, key = { it.parcel.id }) { item ->
-                        ParcelCard(item = item, onClick = { onParcelClick(item.parcel.id) })
+                        SwipeableParcelCard(
+                            item = item,
+                            isRefreshing = item.parcel.id in refreshingIds,
+                            onRefresh = { viewModel.refresh(item.parcel.id) },
+                            onClick = { onParcelClick(item.parcel.id) },
+                        )
                     }
                     if (delivered.isNotEmpty()) {
                         item(key = "delivered_header") {
@@ -144,7 +157,12 @@ fun ParcelListScreen(
                             )
                         }
                         items(delivered, key = { it.parcel.id }) { item ->
-                            ParcelCard(item = item, onClick = { onParcelClick(item.parcel.id) })
+                            SwipeableParcelCard(
+                                item = item,
+                                isRefreshing = item.parcel.id in refreshingIds,
+                                onRefresh = { viewModel.refresh(item.parcel.id) },
+                                onClick = { onParcelClick(item.parcel.id) },
+                            )
                         }
                     }
                 }
@@ -203,8 +221,67 @@ private fun EmptyState(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Paketkarte mit Wischgeste: nach rechts schieben zeigt links ein
+ * Reload-Zeichen; bei Erreichen der Schwelle vibriert es und beim Loslassen
+ * wird genau dieses Paket aktualisiert (die Karte schnappt zurück).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ParcelCard(item: ParcelWithEvents, onClick: () -> Unit) {
+private fun SwipeableParcelCard(
+    item: ParcelWithEvents,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    onClick: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.StartToEnd) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onRefresh()
+            }
+            false // nie wirklich „wegwischen" – immer zurückschnappen
+        },
+    )
+    // Sicherheitsnetz: falls die Box doch mal nicht auf Settled steht, zurücksetzen.
+    LaunchedEffect(dismissState.currentValue) {
+        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+            dismissState.reset()
+        }
+    }
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = false,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(start = 24.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = "Aktualisieren",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        },
+    ) {
+        ParcelCard(item = item, isRefreshing = isRefreshing, onClick = onClick)
+    }
+}
+
+@Composable
+private fun ParcelCard(
+    item: ParcelWithEvents,
+    isRefreshing: Boolean = false,
+    onClick: () -> Unit,
+) {
     val parcel = item.parcel
     val latest = item.latestEvent
 
@@ -253,7 +330,14 @@ private fun ParcelCard(item: ParcelWithEvents, onClick: () -> Unit) {
                 }
             }
             Spacer(Modifier.width(8.dp))
-            StatusChip(status = parcel.status)
+            if (isRefreshing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                StatusChip(status = parcel.status)
+            }
         }
     }
 }

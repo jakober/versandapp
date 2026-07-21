@@ -55,6 +55,10 @@ class ParcelViewModel(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    /** IDs der Pakete, die gerade einzeln aktualisiert werden (für den Spinner auf der Karte). */
+    private val _refreshingIds = MutableStateFlow<Set<Long>>(emptySet())
+    val refreshingIds: StateFlow<Set<Long>> = _refreshingIds.asStateFlow()
+
     /** Live-Fortschritt der manuellen Online-Prüfung; null = kein Fenster sichtbar. */
     private val _refreshProgress = MutableStateFlow<RefreshProgress?>(null)
     val refreshProgress: StateFlow<RefreshProgress?> = _refreshProgress.asStateFlow()
@@ -146,9 +150,16 @@ class ParcelViewModel(
     ): List<RefreshProgressItem> =
         mapIndexed { i, item -> if (i == index) transform(item) else item }
 
+    /** Aktualisiert ein einzelnes Paket (z. B. per Wischgeste) mit Spinner auf der Karte. */
     fun refresh(parcelId: Long) {
+        if (parcelId in _refreshingIds.value) return
         viewModelScope.launch {
-            runCatching { repository.refresh(parcelId, force = true) }
+            _refreshingIds.value = _refreshingIds.value + parcelId
+            try {
+                runCatching { repository.refresh(parcelId, force = true) }
+            } finally {
+                _refreshingIds.value = _refreshingIds.value - parcelId
+            }
         }
     }
 
