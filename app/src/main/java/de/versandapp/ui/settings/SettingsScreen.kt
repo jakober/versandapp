@@ -101,7 +101,7 @@ fun SettingsScreen(
                 Column(Modifier.weight(1f)) {
                     Text("Immer benachrichtigen", style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "Nach jedem Lauf melden (auch „nichts Neues"). Nachts 22–6 Uhr ist Ruhe.",
+                        "Nach jedem Lauf melden (auch ohne Neuigkeiten). Nachts 22-6 Uhr ist Ruhe.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
