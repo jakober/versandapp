@@ -12,6 +12,7 @@ import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.ClaudeTrackingProvider
 import de.versandapp.data.tracking.DemoTrackingProvider
 import de.versandapp.data.tracking.DhlTrackingProvider
+import de.versandapp.data.tracking.EasyPostProvider
 import de.versandapp.data.tracking.OpenAiTrackingProvider
 import de.versandapp.data.tracking.Ship24Provider
 import de.versandapp.data.tracking.TrackingProvider
@@ -71,14 +72,16 @@ class VersandApp : Application() {
      * Logik geht sie der Reihe nach durch und nimmt die erste Quelle, die
      * verlässliche Daten liefert:
      * 1. DHL-API (kostenlos, zuverlässigste Quelle) – nur für DHL/Post
-     * 2. Ship24-API (bezahlt, zuverlässig) – alle Dienste weltweit
-     * 3. OpenAI-/ChatGPT-Online-Suche
-     * 4. Claude-Online-Suche
-     * 5. Demo-Daten, nur wenn gar kein Key hinterlegt ist (App läuft sofort)
+     * 2. EasyPost-API (günstig, pay-as-you-go) – alle Dienste weltweit
+     * 3. Ship24-API (bezahlt, zuverlässig)
+     * 4. OpenAI-/ChatGPT-Online-Suche
+     * 5. Claude-Online-Suche
+     * 6. Demo-Daten, nur wenn gar kein Key hinterlegt ist (App läuft sofort)
      */
     private fun buildProviders(): List<TrackingProvider> = buildList {
         val current = settings.current()
         if (current.dhlApiKey.isNotBlank()) add(DhlTrackingProvider(current.dhlApiKey))
+        if (current.easyPostApiKey.isNotBlank()) add(EasyPostProvider(current.easyPostApiKey))
         if (current.ship24ApiKey.isNotBlank()) add(Ship24Provider(current.ship24ApiKey))
         if (current.openAiApiKey.isNotBlank()) {
             add(OpenAiTrackingProvider(current.openAiApiKey, current.openAiTrackingModel))

@@ -6,6 +6,7 @@ data class AppSettings(
     val anthropicApiKey: String,
     val dhlApiKey: String,
     val ship24ApiKey: String,
+    val easyPostApiKey: String,
     val openAiApiKey: String,
     val openAiTrackingModel: String,
 )
@@ -35,6 +36,11 @@ class SettingsRepository(context: Context) {
     var ship24ApiKey: String
         get() = prefs.getString(KEY_SHIP24, "") ?: ""
         set(value) = prefs.edit().putString(KEY_SHIP24, value.trim()).apply()
+
+    /** Production-Key von easypost.com – günstige Tracking-API (pay-as-you-go). */
+    var easyPostApiKey: String
+        get() = prefs.getString(KEY_EASYPOST, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_EASYPOST, value.trim()).apply()
 
     /**
      * Key von platform.openai.com. Ist er gesetzt, fragt zusätzlich ChatGPT
@@ -91,6 +97,7 @@ class SettingsRepository(context: Context) {
         anthropicApiKey = anthropicApiKey,
         dhlApiKey = dhlApiKey,
         ship24ApiKey = ship24ApiKey,
+        easyPostApiKey = easyPostApiKey,
         openAiApiKey = openAiApiKey,
         openAiTrackingModel = openAiTrackingModel,
     )
@@ -99,6 +106,7 @@ class SettingsRepository(context: Context) {
         const val KEY_ANTHROPIC = "anthropic_api_key"
         const val KEY_DHL = "dhl_api_key"
         const val KEY_SHIP24 = "ship24_api_key"
+        const val KEY_EASYPOST = "easypost_api_key"
         const val KEY_OPENAI = "openai_api_key"
         const val KEY_OPENAI_TRACK_MODEL = "openai_tracking_model"
         const val KEY_GMAIL_LINKED = "gmail_linked"

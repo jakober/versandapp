@@ -49,6 +49,7 @@ fun SettingsScreen(
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
     var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
     var ship24Key by remember { mutableStateOf(initial.ship24ApiKey) }
+    var easyPostKey by remember { mutableStateOf(initial.easyPostApiKey) }
     var openAiKey by remember { mutableStateOf(initial.openAiApiKey) }
     var openAiModel by remember { mutableStateOf(initial.openAiTrackingModel) }
     var notifyAlways by remember { mutableStateOf(viewModel.notifyAlways()) }
@@ -56,7 +57,7 @@ fun SettingsScreen(
     var archiveDays by remember { mutableStateOf(viewModel.archiveAfterDays().toString()) }
 
     fun persist() {
-        viewModel.saveSettings(anthropicKey, dhlKey, ship24Key, openAiKey, openAiModel)
+        viewModel.saveSettings(anthropicKey, dhlKey, ship24Key, easyPostKey, openAiKey, openAiModel)
         viewModel.setArchiveAfterDays(archiveDays.toIntOrNull() ?: 14)
     }
 
@@ -83,6 +84,8 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             KeyField("DHL API-Key", dhlKey, { dhlKey = it },
                 "Kostenlos von developer.dhl.com – DHL/Post über die offizielle API.")
+            KeyField("EasyPost API-Key", easyPostKey, { easyPostKey = it },
+                "Production-Key von easypost.com – günstige Tracking-API (~1-2 EUR/Monat, kein Monatsminimum).")
             KeyField("Ship24 API-Key", ship24Key, { ship24Key = it },
                 "ship24.com – zuverlässige API für alle Dienste (bezahlt).")
             KeyField("OpenAI API-Key (ChatGPT)", openAiKey, { openAiKey = it },

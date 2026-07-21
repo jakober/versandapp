@@ -191,12 +191,14 @@ class ParcelViewModel(
         anthropicApiKey: String,
         dhlApiKey: String,
         ship24ApiKey: String,
+        easyPostApiKey: String,
         openAiApiKey: String,
         openAiTrackingModel: String,
     ) {
         settings.anthropicApiKey = anthropicApiKey
         settings.dhlApiKey = dhlApiKey
         settings.ship24ApiKey = ship24ApiKey
+        settings.easyPostApiKey = easyPostApiKey
         settings.openAiApiKey = openAiApiKey
         settings.openAiTrackingModel = openAiTrackingModel
     }
