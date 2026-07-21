@@ -29,14 +29,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.versandapp.data.model.ParcelStatus
@@ -59,6 +65,22 @@ fun ParcelListScreen(
     val refreshProgress by viewModel.refreshProgress.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+
+    // Pull-to-Refresh: nach unten ziehen löst dieselbe Aktualisierung aus wie
+    // das ↻-Icon. Beim Erreichen der Auslöse-Schwelle vibriert das Gerät kurz.
+    val pullState = rememberPullToRefreshState()
+    val haptics = LocalHapticFeedback.current
+    var passedThreshold by remember { mutableStateOf(false) }
+    LaunchedEffect(pullState) {
+        snapshotFlow { pullState.distanceFraction }.collect { fraction ->
+            if (fraction >= 1f && !passedThreshold) {
+                passedThreshold = true
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            } else if (fraction < 1f && passedThreshold) {
+                passedThreshold = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -90,33 +112,40 @@ fun ParcelListScreen(
             }
         },
     ) { innerPadding ->
-        if (parcels.isEmpty()) {
-            EmptyState(Modifier.padding(innerPadding))
-        } else {
-            // Offene Sendungen (neueste zuerst) oben, zugestellte in einem
-            // eigenen Abschnitt darunter.
-            val (delivered, open) = parcels.partition {
-                it.parcel.status == ParcelStatus.DELIVERED
-            }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(open, key = { it.parcel.id }) { item ->
-                    ParcelCard(item = item, onClick = { onParcelClick(item.parcel.id) })
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refreshAll() },
+            state = pullState,
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+        ) {
+            if (parcels.isEmpty()) {
+                EmptyState(Modifier.fillMaxSize())
+            } else {
+                // Offene Sendungen (neueste zuerst) oben, zugestellte in einem
+                // eigenen Abschnitt darunter.
+                val (delivered, open) = parcels.partition {
+                    it.parcel.status == ParcelStatus.DELIVERED
                 }
-                if (delivered.isNotEmpty()) {
-                    item(key = "delivered_header") {
-                        Text(
-                            "Zugestellt",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
-                    items(delivered, key = { it.parcel.id }) { item ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(open, key = { it.parcel.id }) { item ->
                         ParcelCard(item = item, onClick = { onParcelClick(item.parcel.id) })
+                    }
+                    if (delivered.isNotEmpty()) {
+                        item(key = "delivered_header") {
+                            Text(
+                                "Zugestellt",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
+                        items(delivered, key = { it.parcel.id }) { item ->
+                            ParcelCard(item = item, onClick = { onParcelClick(item.parcel.id) })
+                        }
                     }
                 }
             }
