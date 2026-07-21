@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import de.versandapp.data.model.TrackingEvent
@@ -58,12 +60,19 @@ fun ParcelDetailScreen(
 ) {
     val itemFlow = remember(parcelId) { viewModel.observeParcel(parcelId) }
     val item by itemFlow.collectAsState(initial = null)
+    val refreshSteps by viewModel.refreshSteps.collectAsState()
     val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(item?.parcel?.label ?: "Sendungsdetails") },
+                title = {
+                    Text(
+                        item?.parcel?.label ?: "Sendungsdetails",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
@@ -95,6 +104,7 @@ fun ParcelDetailScreen(
 
         val parcel = current.parcel
         val events = current.events.sortedByDescending { it.timestamp }
+        val refreshStep = refreshSteps[parcelId]
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -110,7 +120,20 @@ fun ParcelDetailScreen(
                         CarrierBadge(carrier = parcel.carrier, size = 56.dp)
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(parcel.carrier.displayName, style = MaterialTheme.typography.titleMedium)
+                            val label = parcel.label
+                            if (label != null) {
+                                Text(label, style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    parcel.carrier.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Text(
+                                    parcel.carrier.displayName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
                             Text(
                                 parcel.trackingNumber,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -118,6 +141,21 @@ fun ParcelDetailScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                             StatusChip(status = parcel.status)
+                            if (refreshStep != null) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        refreshStep,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
                         }
                     }
                     val url = parcel.carrier.trackingUrl(parcel.trackingNumber)

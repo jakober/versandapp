@@ -69,7 +69,7 @@ fun ParcelListScreen(
 ) {
     val parcels by viewModel.parcels.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val refreshingIds by viewModel.refreshingIds.collectAsState()
+    val refreshSteps by viewModel.refreshSteps.collectAsState()
     val refreshProgress by viewModel.refreshProgress.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -142,7 +142,7 @@ fun ParcelListScreen(
                     items(open, key = { it.parcel.id }) { item ->
                         SwipeableParcelCard(
                             item = item,
-                            isRefreshing = item.parcel.id in refreshingIds,
+                            refreshStep = refreshSteps[item.parcel.id],
                             onRefresh = { viewModel.refresh(item.parcel.id) },
                             onClick = { onParcelClick(item.parcel.id) },
                         )
@@ -159,7 +159,7 @@ fun ParcelListScreen(
                         items(delivered, key = { it.parcel.id }) { item ->
                             SwipeableParcelCard(
                                 item = item,
-                                isRefreshing = item.parcel.id in refreshingIds,
+                                refreshStep = refreshSteps[item.parcel.id],
                                 onRefresh = { viewModel.refresh(item.parcel.id) },
                                 onClick = { onParcelClick(item.parcel.id) },
                             )
@@ -230,7 +230,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 @Composable
 private fun SwipeableParcelCard(
     item: ParcelWithEvents,
-    isRefreshing: Boolean,
+    refreshStep: String?,
     onRefresh: () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -272,18 +272,19 @@ private fun SwipeableParcelCard(
             }
         },
     ) {
-        ParcelCard(item = item, isRefreshing = isRefreshing, onClick = onClick)
+        ParcelCard(item = item, refreshStep = refreshStep, onClick = onClick)
     }
 }
 
 @Composable
 private fun ParcelCard(
     item: ParcelWithEvents,
-    isRefreshing: Boolean = false,
+    refreshStep: String? = null,
     onClick: () -> Unit,
 ) {
     val parcel = item.parcel
     val latest = item.latestEvent
+    val isRefreshing = refreshStep != null
 
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
@@ -308,7 +309,16 @@ private fun ParcelCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (latest != null) {
+                if (refreshStep != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = refreshStep,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                } else if (latest != null) {
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = buildString {

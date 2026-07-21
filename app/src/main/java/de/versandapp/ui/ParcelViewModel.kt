@@ -55,9 +55,13 @@ class ParcelViewModel(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    /** IDs der Pakete, die gerade einzeln aktualisiert werden (für den Spinner auf der Karte). */
-    private val _refreshingIds = MutableStateFlow<Set<Long>>(emptySet())
-    val refreshingIds: StateFlow<Set<Long>> = _refreshingIds.asStateFlow()
+    /**
+     * Pakete, die gerade einzeln aktualisiert werden, samt aktuellem Schritt-Text
+     * (z. B. „ChatGPT recherchiert online …") – für Spinner + Schrittanzeige auf
+     * Karte und Detailseite. Enthaltene ID = lädt gerade.
+     */
+    private val _refreshSteps = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val refreshSteps: StateFlow<Map<Long, String>> = _refreshSteps.asStateFlow()
 
     /** Live-Fortschritt der manuellen Online-Prüfung; null = kein Fenster sichtbar. */
     private val _refreshProgress = MutableStateFlow<RefreshProgress?>(null)
@@ -150,15 +154,26 @@ class ParcelViewModel(
     ): List<RefreshProgressItem> =
         mapIndexed { i, item -> if (i == index) transform(item) else item }
 
-    /** Aktualisiert ein einzelnes Paket (z. B. per Wischgeste) mit Spinner auf der Karte. */
+    /**
+     * Aktualisiert ein einzelnes Paket (z. B. per Wischgeste oder Detail-Button)
+     * mit Spinner und Live-Schrittanzeige auf Karte/Detailseite.
+     */
     fun refresh(parcelId: Long) {
-        if (parcelId in _refreshingIds.value) return
+        if (parcelId in _refreshSteps.value) return
         viewModelScope.launch {
-            _refreshingIds.value = _refreshingIds.value + parcelId
+            _refreshSteps.value = _refreshSteps.value + (parcelId to "Wird geprüft …")
             try {
-                runCatching { repository.refresh(parcelId, force = true) }
+                runCatching {
+                    repository.refresh(
+                        parcelId,
+                        force = true,
+                        onProgress = { label ->
+                            _refreshSteps.value = _refreshSteps.value + (parcelId to label)
+                        },
+                    )
+                }
             } finally {
-                _refreshingIds.value = _refreshingIds.value - parcelId
+                _refreshSteps.value = _refreshSteps.value - parcelId
             }
         }
     }
