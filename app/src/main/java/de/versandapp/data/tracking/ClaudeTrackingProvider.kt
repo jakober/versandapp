@@ -37,6 +37,8 @@ class ClaudeTrackingProvider(
 
     override fun supports(carrier: Carrier): Boolean = true
 
+    override val progressLabel: String = "Claude recherchiert online …"
+
     // 20 h Mindestabstand + Abendfenster = genau eine automatische Abfrage pro Tag
     override val minRefreshIntervalMs: Long = 20L * 60L * 60L * 1000L
 

@@ -70,7 +70,11 @@ class TrackingRepository(
      * Zeitfenster des Providers sowie den Zustellstatus (zugestellte Pakete
      * werden im Hintergrund nicht mehr abgefragt).
      */
-    suspend fun refresh(parcelId: Long, force: Boolean = false): RefreshOutcome {
+    suspend fun refresh(
+        parcelId: Long,
+        force: Boolean = false,
+        onProgress: (String) -> Unit = {},
+    ): RefreshOutcome {
         val parcel = dao.getAll().firstOrNull { it.id == parcelId }
             ?: return RefreshOutcome.Skipped("Paket nicht gefunden")
         val supporting = providersFactory().filter { it.supports(parcel.carrier) }
@@ -103,6 +107,7 @@ class TrackingRepository(
                 }
             }
             eligibleCount++
+            onProgress(provider.progressLabel)
             val result = try {
                 provider.track(parcel.trackingNumber, parcel.carrier)
             } catch (e: Exception) {

@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 /** Zustand einer einzelnen Sendung in der Live-Fortschrittsanzeige. */
 sealed interface RefreshItemState {
     data object Waiting : RefreshItemState
-    data object Checking : RefreshItemState
+    data class Checking(val text: String) : RefreshItemState
     data class Done(val text: String) : RefreshItemState
     data class SkippedItem(val text: String) : RefreshItemState
     data class Error(val text: String) : RefreshItemState
@@ -99,10 +99,22 @@ class ParcelViewModel(
                 publishProgress(RefreshProgress(items, finished = parcels.isEmpty()))
 
                 parcels.forEachIndexed { index, parcel ->
-                    items = items.replaceAt(index) { it.copy(state = RefreshItemState.Checking) }
+                    items = items.replaceAt(index) {
+                        it.copy(state = RefreshItemState.Checking("Wird geprüft …"))
+                    }
                     publishProgress(RefreshProgress(items, finished = false))
 
-                    val state = when (val outcome = repository.refresh(parcel.id, force = true)) {
+                    val outcome = repository.refresh(
+                        parcel.id,
+                        force = true,
+                        onProgress = { label ->
+                            items = items.replaceAt(index) {
+                                it.copy(state = RefreshItemState.Checking(label))
+                            }
+                            publishProgress(RefreshProgress(items, finished = false))
+                        },
+                    )
+                    val state = when (outcome) {
                         is RefreshOutcome.Updated -> RefreshItemState.Done(
                             "${outcome.status.displayName} · ${outcome.eventCount} Ereignisse"
                         )

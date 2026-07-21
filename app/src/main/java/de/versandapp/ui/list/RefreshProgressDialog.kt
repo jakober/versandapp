@@ -82,7 +82,7 @@ fun RefreshProgressDialog(
                                     Text(
                                         text = when (val state = item.state) {
                                             RefreshItemState.Waiting -> "Wartet …"
-                                            RefreshItemState.Checking -> "Claude recherchiert online …"
+                                            is RefreshItemState.Checking -> state.text
                                             is RefreshItemState.Done -> state.text
                                             is RefreshItemState.SkippedItem -> state.text
                                             is RefreshItemState.Error -> state.text
@@ -131,7 +131,7 @@ private fun StateIcon(state: RefreshItemState) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),
         )
-        RefreshItemState.Checking -> CircularProgressIndicator(
+        is RefreshItemState.Checking -> CircularProgressIndicator(
             modifier = Modifier.size(20.dp),
             strokeWidth = 2.dp,
         )

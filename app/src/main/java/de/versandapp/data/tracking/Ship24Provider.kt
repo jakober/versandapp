@@ -51,6 +51,8 @@ class Ship24Provider(
 
     override fun supports(carrier: Carrier): Boolean = true
 
+    override val progressLabel: String = "Ship24 wird abgefragt …"
+
     // Wie beim Claude-Provider: 20 h Mindestabstand + Abendfenster = im
     // Hintergrund höchstens eine Ship24-Abfrage pro Tag und Paket.
     override val minRefreshIntervalMs: Long = 20L * 60L * 60L * 1000L

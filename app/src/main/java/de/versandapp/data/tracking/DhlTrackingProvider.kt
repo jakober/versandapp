@@ -31,6 +31,8 @@ class DhlTrackingProvider(
     override fun supports(carrier: Carrier): Boolean =
         carrier == Carrier.DHL || carrier == Carrier.DEUTSCHE_POST
 
+    override val progressLabel: String = "DHL-API wird abgefragt …"
+
     override suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult =
         withContext(Dispatchers.IO) {
             val request = Request.Builder()

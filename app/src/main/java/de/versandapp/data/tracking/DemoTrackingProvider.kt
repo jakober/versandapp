@@ -14,6 +14,8 @@ class DemoTrackingProvider : TrackingProvider {
 
     override fun supports(carrier: Carrier): Boolean = true
 
+    override val progressLabel: String = "Demo-Daten werden geladen …"
+
     override suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult {
         delay(400) // simulierte Netzwerklatenz
 

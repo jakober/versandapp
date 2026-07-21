@@ -34,6 +34,13 @@ interface TrackingProvider {
     fun supports(carrier: Carrier): Boolean
 
     /**
+     * Kurztext für die Live-Fortschrittsanzeige, während genau diese Quelle
+     * abgefragt wird (z. B. „ChatGPT recherchiert online …").
+     */
+    val progressLabel: String
+        get() = "Wird geprüft …"
+
+    /**
      * Mindestabstand zwischen automatischen Hintergrund-Aktualisierungen.
      * 0 = keine Drosselung. Kostenpflichtige Provider (Claude) setzen hier
      * ein größeres Intervall; manuelle Aktualisierung ignoriert die Drossel.
