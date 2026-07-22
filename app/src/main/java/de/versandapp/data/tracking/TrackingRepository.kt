@@ -116,10 +116,11 @@ class TrackingRepository(
                 provider.track(parcel.trackingNumber, parcel.carrier)
             } catch (e: Exception) {
                 lastFailure = e.message ?: "Unbekannter Fehler"
-                // Fehlgeschlagene Quelle im Live-Fenster sichtbar machen, bevor die
-                // nächste drankommt (z. B. „DHL-API: kein Treffer – weiter …").
+                // Fehlgeschlagene Quelle mit echtem Fehler im Live-Fenster zeigen und
+                // kurz stehen lassen, sonst überschreibt der nächste Schritt sofort.
                 val source = provider.progressLabel.substringBefore(" wird").substringBefore(" recher")
-                onProgress("$source: kein Treffer – weiter …")
+                onProgress("$source: ${lastFailure.take(120)}")
+                kotlinx.coroutines.delay(1400)
                 continue
             }
             persistResult(parcel, result)
