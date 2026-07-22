@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.versandapp.ui.detail.ParcelDetailScreen
 import de.versandapp.ui.list.ParcelListScreen
+import de.versandapp.ui.log.LogScreen
 import de.versandapp.ui.mailimport.MailImportScreen
 import de.versandapp.ui.mailimport.MailImportViewModel
 import de.versandapp.ui.settings.SettingsScreen
@@ -87,7 +88,14 @@ private fun VersandAppNavHost(pendingParcelId: MutableState<Long?>) {
             )
         }
         composable("settings") {
-            SettingsScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
+            SettingsScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onOpenLog = { navController.navigate("log") },
+            )
+        }
+        composable("log") {
+            LogScreen(onBack = { navController.popBackStack() })
         }
         composable("import") {
             val importViewModel: MailImportViewModel = viewModel(factory = MailImportViewModel.Factory)

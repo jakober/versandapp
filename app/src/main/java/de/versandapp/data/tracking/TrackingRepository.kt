@@ -1,6 +1,7 @@
 package de.versandapp.data.tracking
 
 import de.versandapp.data.db.ParcelDao
+import de.versandapp.data.log.DiagnosticsLog
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.Parcel
 import de.versandapp.data.model.ParcelStatus
@@ -92,6 +93,7 @@ class TrackingRepository(
         // Daten liefert, gewinnt. Dadurch bleibt eine kostenpflichtige Quelle
         // (Ship24) ein echter Notnagel – sie wird nur angefragt, wenn die freien
         // Quellen davor (DHL-API, Claude-Online-Suche) nichts gefunden haben.
+        val parcelName = parcel.label ?: parcel.trackingNumber
         var eligibleCount = 0
         var throttled = false
         var outsideWindow = false
@@ -111,20 +113,25 @@ class TrackingRepository(
                 }
             }
             eligibleCount++
+            val source = provider.progressLabel.substringBefore(" wird").substringBefore(" recher")
             onProgress(provider.progressLabel)
             val result = try {
                 provider.track(parcel.trackingNumber, parcel.carrier)
             } catch (e: Exception) {
                 lastFailure = e.message ?: "Unbekannter Fehler"
-                // Fehlgeschlagene Quelle mit echtem Fehler im Live-Fenster zeigen und
-                // kurz stehen lassen, sonst überschreibt der nächste Schritt sofort.
-                val source = provider.progressLabel.substringBefore(" wird").substringBefore(" recher")
+                // Jede fehlgeschlagene Quelle mit echtem Fehler ins Protokoll schreiben
+                // (auch warum z. B. ChatGPT nichts fand) und kurz im Live-Fenster zeigen.
+                DiagnosticsLog.add(parcelName, source, lastFailure, ok = false)
                 onProgress("$source: ${lastFailure.take(120)}")
-                kotlinx.coroutines.delay(1400)
                 continue
             }
             persistResult(parcel, result)
-            val source = provider.progressLabel.substringBefore(" wird").substringBefore(" recher")
+            DiagnosticsLog.add(
+                parcelName,
+                source,
+                "Treffer · ${result.status.displayName} · ${result.events.size} Ereignisse",
+                ok = true,
+            )
             return RefreshOutcome.Updated(result.status, result.events.size, source)
         }
 

@@ -8,6 +8,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import de.versandapp.data.ai.ClaudeTranslator
 import de.versandapp.data.db.AppDatabase
+import de.versandapp.data.log.DiagnosticsLog
 import de.versandapp.data.settings.SettingsRepository
 import de.versandapp.data.tracking.ClaudeTrackingProvider
 import de.versandapp.data.tracking.DemoTrackingProvider
@@ -38,6 +39,7 @@ class VersandApp : Application() {
         super.onCreate()
 
         settings = SettingsRepository(this)
+        DiagnosticsLog.init(this)
 
         val translator = ClaudeTranslator()
         repository = TrackingRepository(

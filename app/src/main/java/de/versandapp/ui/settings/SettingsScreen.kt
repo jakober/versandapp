@@ -44,6 +44,7 @@ import de.versandapp.ui.ParcelViewModel
 fun SettingsScreen(
     viewModel: ParcelViewModel,
     onBack: () -> Unit,
+    onOpenLog: () -> Unit,
 ) {
     val initial = remember { viewModel.currentSettings() }
     var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
@@ -145,6 +146,25 @@ fun SettingsScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+            Text("Diagnose", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { persist(); onOpenLog() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Protokoll anzeigen")
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Zeigt für jede Abfrage, welche Quelle was geliefert hat – inkl. " +
+                    "echtem Fehlergrund (z. B. warum DHL oder ChatGPT nichts fand).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             Spacer(Modifier.height(24.dp))
             Text(
                 "Änderungen werden beim Zurückgehen gespeichert.",
