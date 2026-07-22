@@ -10,7 +10,11 @@ import kotlinx.coroutines.flow.Flow
 
 /** Ergebnis einer einzelnen Statusabfrage – Grundlage für die Fortschrittsanzeige. */
 sealed interface RefreshOutcome {
-    data class Updated(val status: de.versandapp.data.model.ParcelStatus, val eventCount: Int) : RefreshOutcome
+    data class Updated(
+        val status: de.versandapp.data.model.ParcelStatus,
+        val eventCount: Int,
+        val source: String = "",
+    ) : RefreshOutcome
     data class Skipped(val reason: String) : RefreshOutcome
     data class Failed(val message: String) : RefreshOutcome
 }
@@ -112,10 +116,15 @@ class TrackingRepository(
                 provider.track(parcel.trackingNumber, parcel.carrier)
             } catch (e: Exception) {
                 lastFailure = e.message ?: "Unbekannter Fehler"
+                // Fehlgeschlagene Quelle im Live-Fenster sichtbar machen, bevor die
+                // nächste drankommt (z. B. „DHL-API: kein Treffer – weiter …").
+                val source = provider.progressLabel.substringBefore(" wird").substringBefore(" recher")
+                onProgress("$source: kein Treffer – weiter …")
                 continue
             }
             persistResult(parcel, result)
-            return RefreshOutcome.Updated(result.status, result.events.size)
+            val source = provider.progressLabel.substringBefore(" wird").substringBefore(" recher")
+            return RefreshOutcome.Updated(result.status, result.events.size, source)
         }
 
         if (eligibleCount == 0) {

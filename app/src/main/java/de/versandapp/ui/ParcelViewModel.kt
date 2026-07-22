@@ -131,7 +131,10 @@ class ParcelViewModel(
                     )
                     val state = when (outcome) {
                         is RefreshOutcome.Updated -> RefreshItemState.Done(
-                            "${outcome.status.displayName} · ${outcome.eventCount} Ereignisse"
+                            buildString {
+                                append("${outcome.status.displayName} · ${outcome.eventCount} Ereignisse")
+                                if (outcome.source.isNotBlank()) append(" · ${outcome.source}")
+                            }
                         )
                         is RefreshOutcome.Skipped -> RefreshItemState.SkippedItem(outcome.reason)
                         is RefreshOutcome.Failed -> RefreshItemState.Error(outcome.message)

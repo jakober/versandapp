@@ -35,25 +35,43 @@ class DhlTrackingProvider(
 
     override suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult =
         withContext(Dispatchers.IO) {
-            val request = Request.Builder()
-                .url("https://api-eu.dhl.com/track/shipments?trackingNumber=$trackingNumber")
-                .header("DHL-API-Key", apiKey)
-                .build()
-
-            val body = try {
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        throw TrackingException("DHL API antwortete mit HTTP ${response.code}")
-                    }
-                    response.body?.string()
-                        ?: throw TrackingException("Leere Antwort der DHL API")
+            // Die generische Unified-API findet deutsche Paketnummern oft nur mit
+            // service-Parameter. Der Reihe nach probieren, bis eine Variante eine
+            // Sendung liefert.
+            val base = "https://api-eu.dhl.com/track/shipments?trackingNumber=$trackingNumber"
+            val urls = listOf(
+                base,
+                "$base&service=parcel-de",
+                "$base&service=post-de",
+            )
+            var lastError: TrackingException? = null
+            for (url in urls) {
+                try {
+                    return@withContext parse(fetch(url))
+                } catch (e: TrackingException) {
+                    lastError = e
                 }
-            } catch (e: IOException) {
-                throw TrackingException("Netzwerkfehler bei der DHL-Abfrage", e)
             }
-
-            parse(body)
+            throw lastError ?: TrackingException("DHL: keine Sendung gefunden")
         }
+
+    private fun fetch(url: String): String {
+        val request = Request.Builder()
+            .url(url)
+            .header("DHL-API-Key", apiKey)
+            .build()
+        return try {
+            client.newCall(request).execute().use { response ->
+                val text = response.body?.string()
+                if (!response.isSuccessful) {
+                    throw TrackingException("DHL API antwortete mit HTTP ${response.code}")
+                }
+                text ?: throw TrackingException("Leere Antwort der DHL API")
+            }
+        } catch (e: IOException) {
+            throw TrackingException("Netzwerkfehler bei der DHL-Abfrage", e)
+        }
+    }
 
     private fun parse(body: String): TrackingResult {
         val root = json.parseToJsonElement(body).jsonObject
