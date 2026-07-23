@@ -40,14 +40,15 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
         maxResults: Int = 60,
     ): List<MailMessage> =
         withContext(Dispatchers.IO) {
-            // Bewusst KEIN Absender-/Betreff-Filter mehr: Es werden schlicht alle
-            // Mails im Zeitfenster geladen und danach von der KI im Volltext
-            // gelesen. Erster Scan: letzte 48 h; danach ab dem letzten Scan.
-            val query = if (afterEpochSeconds > 0L) {
-                "after:$afterEpochSeconds"
-            } else {
-                "newer_than:2d"
-            }
+            // Zeitfenster (erster Scan: letzte 48 h; danach ab dem letzten Scan)
+            // kombiniert mit einem INHALTS-Filter: Es werden nur Mails geladen,
+            // die überhaupt ein Versand-Stichwort enthalten. Das bleibt bewusst
+            // ABSENDER-unabhängig (der Filter greift auch im Volltext/Body), hält
+            // aber reine Newsletter, Rechnungen und Werbung ohne jeden
+            // Versandbezug von der KI fern – sonst zieht sie dort fälschlich
+            // Bestell-/Rechnungsnummern als „Trackingnummer" heraus.
+            val window = if (afterEpochSeconds > 0L) "after:$afterEpochSeconds" else "newer_than:2d"
+            val query = "$window $SHIPMENT_KEYWORDS"
             listMessageIds(accessToken, query, maxResults).mapNotNull { id ->
                 runCatching { getMessage(accessToken, id) }.getOrNull()
             }
@@ -140,5 +141,20 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
 
     companion object {
         const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
+
+        /**
+         * Inhalts-Vorfilter für die Gmail-Suche (matcht auch im Mail-Body, also
+         * NICHT absenderabhängig). Eine Mail muss mindestens eines dieser
+         * Versand-Stichwörter enthalten, um überhaupt zur KI-Analyse zu kommen.
+         * Bewusst breit gehalten, damit keine echte Versandmail durchrutscht,
+         * aber ohne Bezug zu Sendungen (Newsletter, Rechnungen) fällt sofort weg.
+         */
+        private const val SHIPMENT_KEYWORDS = "(" +
+            "sendungsnummer OR sendungsverfolgung OR trackingnummer OR paketnummer OR " +
+            "tracking OR versandt OR verschickt OR versandbestätigung OR versandbestaetigung OR " +
+            "versandbenachrichtigung OR unterwegs OR zustellung OR zugestellt OR ausgeliefert OR " +
+            "lieferung OR sendung OR paket OR päckchen OR shipped OR shipment OR " +
+            "delivery OR delivered OR parcel OR dhl OR hermes OR dpd OR gls OR ups OR fedex OR amazon" +
+            ")"
     }
 }

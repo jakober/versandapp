@@ -51,6 +51,11 @@ class ClaudeMailExtractor(
         return root["shipments"]?.jsonArray.orEmpty()
             .mapNotNull { element ->
                 val shipment = element.jsonObject
+                // Nur klar belegte Sendungen übernehmen: unsichere Treffer (z. B.
+                // eine lange Nummer aus einem Newsletter) fliegen raus, damit die
+                // Liste nicht mit Fehltreffern volläuft.
+                val confidence = shipment["confidence"]?.jsonPrimitive?.content
+                if (confidence != null && confidence != "high") return@mapNotNull null
                 val trackingNumber = shipment["tracking_number"]?.jsonPrimitive?.content
                     ?.let { CarrierDetector.normalize(it) }
                     ?.takeIf { it.length >= 8 }
@@ -157,9 +162,24 @@ class ClaudeMailExtractor(
             (in Zustellung/in Auslieferung), DELIVERED (zugestellt/geliefert),
             sonst UNKNOWN.
 
+            confidence – WIE SICHER ist es eine echte Sendung mit echter
+            Trackingnummer? Sei streng, lieber weglassen als falsch erfassen:
+              - "high": Die Mail ist eindeutig eine Versand-/Zustellmail UND die
+                Nummer ist ausdrücklich als Sendungs-/Trackingnummer beschriftet
+                ODER stammt aus einem offiziellen Sendungsverfolgungs-Link.
+                (Amazon-Sonderfall: nur bei einer echten Amazon-Versand-/
+                Zustellmail mit Bestellnummer.)
+              - "medium": Versandkontext erkennbar, aber die Nummer stammt nur aus
+                dem Fließtext ohne klare Beschriftung/Link.
+              - "low": unsicher – könnte auch Bestell-/Rechnungs-/Artikelnummer
+                sein, oder die Mail ist gar keine Versandmail.
+            Gib NUR Sendungen mit confidence "high" aus. Alles Unsichere
+            (medium/low) NICHT aufnehmen.
+
             Mehrere Mails zur selben Sendung zu einem Eintrag zusammenfassen
-            (aktuellsten Status verwenden). Reine Werbung ohne Sendung ignorieren.
-            Enthält keine Mail eine Sendung, gib eine leere Liste zurück.
+            (aktuellsten Status verwenden). Reine Werbung, Bestellbestätigungen
+            ohne Versand, Rechnungen und Newsletter ignorieren. Enthält keine
+            Mail eine sicher belegte Sendung, gib eine leere Liste zurück.
         """.trimIndent()
 
         private val OUTPUT_SCHEMA = """
@@ -182,9 +202,13 @@ class ClaudeMailExtractor(
                     "status": {
                       "type": "string",
                       "enum": ["REGISTERED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "UNKNOWN"]
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": ["high", "medium", "low"]
                     }
                   },
-                  "required": ["tracking_number", "carrier", "label", "status"],
+                  "required": ["tracking_number", "carrier", "label", "status", "confidence"],
                   "additionalProperties": false
                 }
               }
