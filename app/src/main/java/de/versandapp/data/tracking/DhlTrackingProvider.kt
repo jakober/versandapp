@@ -64,7 +64,11 @@ class DhlTrackingProvider(
             client.newCall(request).execute().use { response ->
                 val text = response.body?.string()
                 if (!response.isSuccessful) {
-                    throw TrackingException("DHL API antwortete mit HTTP ${response.code}")
+                    // DHL liefert bei Fehlern einen erklärenden Text mit (z. B. Grund
+                    // für 401) – mit ins Protokoll nehmen, statt nur den Statuscode.
+                    throw TrackingException(
+                        "DHL API HTTP ${response.code}: ${text?.take(200)?.replace("\n", " ")}"
+                    )
                 }
                 text ?: throw TrackingException("Leere Antwort der DHL API")
             }
