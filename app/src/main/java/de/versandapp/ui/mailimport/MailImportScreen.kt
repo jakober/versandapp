@@ -199,7 +199,9 @@ private fun SuggestionList(
     if (items.isEmpty()) {
         Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
             Text(
-                "Keine neuen Sendungen gefunden. Bereits verfolgte Pakete werden übersprungen.",
+                "Keine neuen Sendungen zum Hinzufügen. Bereits verfolgte Pakete werden " +
+                    "nicht doppelt angelegt – ihr Status wird aber aus neuen Mails " +
+                    "aktualisiert (z. B. Amazon „in Zustellung").",
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
