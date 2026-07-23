@@ -201,7 +201,7 @@ private fun SuggestionList(
             Text(
                 "Keine neuen Sendungen zum Hinzufügen. Bereits verfolgte Pakete werden " +
                     "nicht doppelt angelegt – ihr Status wird aber aus neuen Mails " +
-                    "aktualisiert (z. B. Amazon „in Zustellung").",
+                    "aktualisiert (z. B. Amazon: in Zustellung).",
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
