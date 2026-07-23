@@ -35,14 +35,16 @@ class DhlTrackingProvider(
 
     override suspend fun track(trackingNumber: String, carrier: Carrier): TrackingResult =
         withContext(Dispatchers.IO) {
-            // Die generische Unified-API findet deutsche Paketnummern oft nur mit
-            // service-Parameter. Der Reihe nach probieren, bis eine Variante eine
-            // Sendung liefert.
-            val base = "https://api-eu.dhl.com/track/shipments?trackingNumber=$trackingNumber"
+            // Die Unified-API braucht bei deutschen Sendungen den service-Parameter:
+            // ein Aufruf OHNE service liefert bei manchen Keys 401. Deshalb zuerst
+            // parcel-de (DHL Paket) und post-de (Deutsche Post), erst als letzter
+            // Fallback der generische Aufruf (für andere DHL-Divisionen).
+            val base = "https://api-eu.dhl.com/track/shipments" +
+                "?trackingNumber=$trackingNumber&language=de"
             val urls = listOf(
-                base,
                 "$base&service=parcel-de",
                 "$base&service=post-de",
+                base,
             )
             var lastError: TrackingException? = null
             for (url in urls) {
@@ -59,6 +61,7 @@ class DhlTrackingProvider(
         val request = Request.Builder()
             .url(url)
             .header("DHL-API-Key", apiKey)
+            .header("Accept", "application/json")
             .build()
         return try {
             client.newCall(request).execute().use { response ->
