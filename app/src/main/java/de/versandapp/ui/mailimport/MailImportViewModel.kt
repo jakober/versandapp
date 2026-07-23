@@ -48,11 +48,19 @@ class MailImportViewModel(
         viewModelScope.launch {
             try {
                 val known = repository.trackedNumbers()
-                val suggestions = scanner.scan(
+                val allSuggestions = scanner.scan(
                     gmailAccessToken = accessToken,
                     anthropicApiKey = settings.anthropicApiKey,
                     afterEpochSeconds = settings.lastMailImportEpochSeconds,
-                ).filter { it.trackingNumber !in known }
+                )
+                // Bereits verfolgte Sendungen: Status aus der Mail nachziehen
+                // (z. B. Amazon „in Zustellung"/„zugestellt").
+                allSuggestions
+                    .filter { it.trackingNumber in known }
+                    .forEach { s ->
+                        s.initialStatus?.let { repository.updateStatusFromMail(s.trackingNumber, it) }
+                    }
+                val suggestions = allSuggestions.filter { it.trackingNumber !in known }
                 _state.value = ImportUiState.Ready(suggestions.map { SuggestionItem(it) })
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "Unbekannter Fehler")

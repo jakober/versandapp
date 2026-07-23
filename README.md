@@ -45,16 +45,20 @@ Reihenfolge der Kette (die erste Quelle mit verlässlichen Daten gewinnt):
 
 | # | Provider | Zweck |
 | --- | --- | --- |
-| 1 | `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com) („Shipment Tracking – Unified") |
+| 1 | `DhlTrackingProvider` | **DHL/Deutsche Post über die offizielle API** (zuverlässigste Quelle) – kostenloser Key auf [developer.dhl.com](https://developer.dhl.com) („Shipment Tracking – Unified"). Ruft mit `service=parcel-de`/`post-de` + Header `Accept: application/json` |
 | 2 | `EasyPostProvider` | **EasyPost-Tracking-API** (günstig, pay-as-you-go ~0,02 $/Sendung, kein Monatsminimum): DHL Paket, DPD, GLS, UPS, FedEx u. a. Production-Key auf [easypost.com](https://www.easypost.com) |
 | 3 | `Ship24Provider` | **Ship24-API** (bezahlt, zuverlässig): alle Dienste weltweit inkl. China. Optionaler Key auf [ship24.com](https://www.ship24.com) |
-| 4 | `OpenAiTrackingProvider` | **ChatGPT-Online-Suche** (OpenAI): ruft Daten-/JSON-Endpunkte der Carrier und Tracking-Portale ab. Automatisch 1× täglich abends, nur offene Pakete |
-| 5 | `ClaudeTrackingProvider` | **Claude-Online-Suche** (analog, als weitere Quelle) |
-| 6 | `DemoTrackingProvider` | Fallback mit Beispieldaten, **nur** aktiv, wenn gar kein Key hinterlegt ist – so läuft die App sofort |
+| 4 | `DemoTrackingProvider` | Fallback mit Beispieldaten, **nur** aktiv, wenn gar kein Key hinterlegt ist – so läuft die App sofort |
 
 Die `TrackingRepository`-Logik geht die Kette **der Reihe nach** durch und
 nimmt die erste Quelle, die verlässliche Daten liefert. Erst wenn eine Quelle
 nichts findet, wird die nächste angefragt.
+
+**KI (Claude/ChatGPT) wird nicht mehr fürs Tracking verwendet** (fand kaum
+verlässliche Daten). Claude analysiert nur noch das Postfach
+(`ClaudeMailExtractor`); für Sendungen ohne Online-Tracking (z. B. Amazon)
+wird der Status **aus den Mails** abgeleitet und bei Folge-Mails
+fortgeschrieben (`TrackingRepository.updateStatusFromMail`).
 
 Alle Keys werden in den App-Einstellungen (Zahnrad) gespeichert
 (SharedPreferences), nicht im Code.

@@ -181,6 +181,41 @@ class TrackingRepository(
         dao.update(parcel.copy(label = label?.takeIf { it.isNotBlank() }, carrier = carrier))
     }
 
+    /**
+     * Aktualisiert den Status einer bereits verfolgten Sendung anhand einer Mail
+     * (z. B. Amazon „in Zustellung"/„zugestellt"). Nur **vorwärts** – ein aus der
+     * Mail abgeleiteter Status überschreibt einen weiter fortgeschrittenen nie.
+     * Legt bei echter Änderung einen Verlaufseintrag „Laut E-Mail: …" an.
+     * Gibt true zurück, wenn tatsächlich aktualisiert wurde.
+     */
+    suspend fun updateStatusFromMail(trackingNumber: String, mailStatus: ParcelStatus): Boolean {
+        val parcel = dao.findByTrackingNumber(trackingNumber) ?: return false
+        if (statusRank(mailStatus) <= statusRank(parcel.status)) return false
+        dao.insertEvents(
+            listOf(
+                TrackingEvent(
+                    parcelId = parcel.id,
+                    timestamp = System.currentTimeMillis(),
+                    description = "Laut E-Mail: ${mailStatus.displayName}",
+                    location = null,
+                    status = mailStatus,
+                )
+            )
+        )
+        dao.update(parcel.copy(status = mailStatus, lastUpdated = System.currentTimeMillis()))
+        return true
+    }
+
+    /** Fortschritt eines Status (nur für „nur vorwärts"-Vergleich). */
+    private fun statusRank(status: ParcelStatus): Int = when (status) {
+        ParcelStatus.UNKNOWN -> 0
+        ParcelStatus.REGISTERED -> 1
+        ParcelStatus.IN_TRANSIT -> 2
+        ParcelStatus.OUT_FOR_DELIVERY -> 3
+        ParcelStatus.DELIVERED -> 4
+        ParcelStatus.FAILED -> 2
+    }
+
     /** Alle noch nicht zugestellten Pakete (Reihenfolge wie in der Liste). */
     suspend fun openParcels(): List<Parcel> =
         dao.getAll()

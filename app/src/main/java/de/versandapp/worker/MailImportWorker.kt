@@ -49,27 +49,36 @@ class MailImportWorker(
         if (authResult.hasResolution()) return Result.success() // Nutzer müsste neu zustimmen
         val token = authResult.accessToken ?: return Result.success()
 
-        val imported = try {
+        val result = try {
             val suggestions = ShipmentMailScanner().scan(
                 gmailAccessToken = token,
                 anthropicApiKey = app.settings.anthropicApiKey,
                 afterEpochSeconds = app.settings.lastMailImportEpochSeconds,
             )
             val known = app.repository.trackedNumbers()
-            suggestions
-                .filter { it.trackingNumber !in known }
-                .onEach { suggestion ->
-                    app.repository.addParcel(
-                        trackingNumber = suggestion.trackingNumber,
-                        carrier = suggestion.carrier,
-                        label = suggestion.sourceSubject.takeIf { it.isNotBlank() },
-                        initialStatus = suggestion.initialStatus,
-                    )
-                }
-                .size
+            // Neue Sendungen anlegen.
+            var imported = 0
+            suggestions.filter { it.trackingNumber !in known }.forEach { suggestion ->
+                app.repository.addParcel(
+                    trackingNumber = suggestion.trackingNumber,
+                    carrier = suggestion.carrier,
+                    label = suggestion.sourceSubject.takeIf { it.isNotBlank() },
+                    initialStatus = suggestion.initialStatus,
+                )
+                imported++
+            }
+            // Bereits verfolgte Sendungen: Status aus der Mail nachziehen
+            // (z. B. Amazon „in Zustellung"/„zugestellt").
+            var updated = 0
+            suggestions.filter { it.trackingNumber in known }.forEach { suggestion ->
+                val status = suggestion.initialStatus ?: return@forEach
+                if (app.repository.updateStatusFromMail(suggestion.trackingNumber, status)) updated++
+            }
+            imported to updated
         } catch (_: Exception) {
             return Result.retry()
         }
+        val (imported, updated) = result
 
         // Ab jetzt nur noch Mails ab diesem Zeitpunkt berücksichtigen
         app.settings.lastMailImportEpochSeconds = System.currentTimeMillis() / 1000
@@ -79,18 +88,22 @@ class MailImportWorker(
 
         // Bei Neuigkeiten immer melden; „nichts Neues" nur, wenn der Nutzer
         // sich jede Prüfung bestätigen lassen will.
-        if (imported > 0) {
-            notifyImported(imported)
+        if (imported > 0 || updated > 0) {
+            notifyImported(imported, updated)
         } else if (app.settings.notifyAlways) {
             notifyNothingNew()
         }
         return Result.success()
     }
 
-    private fun notifyImported(count: Int) {
-        val text = if (count == 1) "1 neue Sendung aus Gmail importiert"
-        else "$count neue Sendungen aus Gmail importiert"
-        notify(text)
+    private fun notifyImported(imported: Int, updated: Int) {
+        val parts = buildList {
+            if (imported == 1) add("1 neue Sendung importiert")
+            else if (imported > 1) add("$imported neue Sendungen importiert")
+            if (updated == 1) add("1 Sendung aktualisiert")
+            else if (updated > 1) add("$updated Sendungen aktualisiert")
+        }
+        notify(parts.joinToString(" · ").ifEmpty { "Postfach geprüft" })
     }
 
     private fun notifyNothingNew() {

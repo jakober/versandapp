@@ -89,12 +89,8 @@ fun SettingsScreen(
                 "Production-Key von easypost.com – günstige Tracking-API (~1-2 EUR/Monat, kein Monatsminimum).")
             KeyField("Ship24 API-Key", ship24Key, { ship24Key = it },
                 "ship24.com – zuverlässige API für alle Dienste (bezahlt).")
-            KeyField("OpenAI API-Key (ChatGPT)", openAiKey, { openAiKey = it },
-                "platform.openai.com – zusätzliche Online-Suche per ChatGPT.")
-            KeyField("OpenAI-Modell (Sendungssuche)", openAiModel, { openAiModel = it },
-                "Nur ändern, wenn der vorgegebene Name im OpenAI-Konto nicht existiert.")
             KeyField("Anthropic API-Key (Claude)", anthropicKey, { anthropicKey = it },
-                "console.anthropic.com – für Mail-Erkennung und Online-Suche per Claude.")
+                "console.anthropic.com – nur noch für die Postfach-Erkennung (Mail-Analyse), nicht mehr fürs Tracking.")
 
             Spacer(Modifier.height(8.dp))
             HorizontalDivider()
