@@ -3,7 +3,10 @@
   VersandApp-Standardlogo: 4 abgerundete Blöcke (oben rechts gold, sonst orange)
   mit 3D-Schattierung an den zur Mitte zeigenden Kanten (wie die Deckelklappen
   eines Kartons von oben) – dadurch wirkt es leicht wie ein Paket.
-  Inhalt (0..328) via group-Transform auf 90 % der 108er-Fläche = 5 % Rand je Seite.
+  Inhalt (0..328) via group-Transform auf 70 % der 108er-Fläche = 15 % Datei-Rand
+  je Seite. Adaptive Icons werden vom Launcher gezoomt/an der Maske beschnitten,
+  daher muss der Datei-Rand größer sein als der gewünschte sichtbare Rand –
+  so bleibt nach dem Zuschnitt ein klarer weißer Abstand um die Quadrate.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -11,10 +14,10 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="0.296341"
-        android:scaleY="0.296341"
-        android:translateX="5.4"
-        android:translateY="5.4">
+        android:scaleX="0.230488"
+        android:scaleY="0.230488"
+        android:translateX="16.2"
+        android:translateY="16.2">
         <!-- Grundflächen -->
         <path
             android:fillColor="#E85510"
