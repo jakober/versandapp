@@ -81,7 +81,8 @@ class TestNotificationWorker(
             val id = NOTIFICATION_ID_BASE + (System.currentTimeMillis() % 100_000).toInt()
 
             val notification = NotificationCompat.Builder(context, RefreshWorker.CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_stat_logo)
+                .setLargeIcon(appLogoBitmap(context))
                 .setContentTitle("Test-Benachrichtigung")
                 .setContentText("Push funktioniert – $time")
                 .setContentIntent(openApp)

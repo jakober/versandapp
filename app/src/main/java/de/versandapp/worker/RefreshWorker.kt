@@ -67,7 +67,8 @@ class RefreshWorker(
             else -> "$checkedCount Pakete geprüft – nichts Neues"
         }
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_stat_logo)
+            .setLargeIcon(appLogoBitmap(applicationContext))
             .setContentTitle("Statusprüfung")
             .setContentText(text)
             .setContentIntent(openApp)
@@ -92,7 +93,8 @@ class RefreshWorker(
         )
 
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_stat_logo)
+            .setLargeIcon(appLogoBitmap(applicationContext))
             .setContentTitle(parcel.label ?: parcel.trackingNumber)
             .setContentText("${parcel.carrier.displayName}: ${parcel.status.displayName}")
             .setContentIntent(openApp)
