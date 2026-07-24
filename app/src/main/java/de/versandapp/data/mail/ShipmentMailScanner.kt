@@ -1,5 +1,7 @@
 package de.versandapp.data.mail
 
+import de.versandapp.data.log.DiagnosticsLog
+
 /**
  * Gemeinsame Scan-Logik für manuellen und automatischen Mail-Import:
  * Versand-Mails laden und Sendungen extrahieren – per Claude, wenn ein
@@ -19,6 +21,11 @@ class ShipmentMailScanner(
         afterEpochSeconds: Long = 0L,
     ): List<ShipmentSuggestion> {
         val mails = gmail.searchShipmentMails(gmailAccessToken, afterEpochSeconds)
+        // Gescannte Mails ins Protokoll aufnehmen, damit der Nutzer sie selbst
+        // in Gmail öffnen kann (z. B. um einen Abmelde-Link anzuklicken).
+        mails.forEach {
+            DiagnosticsLog.addMail(it.from, it.subject, GmailService.gmailDeepLink(it))
+        }
         if (anthropicApiKey.isNotBlank()) {
             runCatching { return claudeExtractor.extract(anthropicApiKey, mails) }
         }

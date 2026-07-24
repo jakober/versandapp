@@ -17,6 +17,8 @@ data class MailMessage(
     val subject: String,
     val from: String,
     val body: String,
+    /** RFC822 „Message-ID"-Header – für den Deep-Link zum Öffnen in Gmail. */
+    val messageId: String = "",
 )
 
 class MailException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -82,6 +84,7 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
             subject = headers["Subject"] ?: "",
             from = headers["From"] ?: "",
             body = extractText(payload),
+            messageId = headers["Message-ID"] ?: headers["Message-Id"] ?: "",
         )
     }
 
@@ -141,6 +144,22 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
 
     companion object {
         const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
+
+        /**
+         * Baut einen Link, der die konkrete Mail in Gmail öffnet (App oder Web).
+         * Bevorzugt die stabile RFC822-Message-ID-Suche; fällt sonst auf die
+         * Gmail-interne Nachrichten-ID zurück. So kann der Nutzer die Mail selbst
+         * ansehen und z. B. einen Abmelde-Link anklicken.
+         */
+        fun gmailDeepLink(mail: MailMessage): String {
+            val rid = mail.messageId.trim().removePrefix("<").removeSuffix(">")
+            return if (rid.isNotBlank()) {
+                "https://mail.google.com/mail/u/0/#search/" +
+                    java.net.URLEncoder.encode("rfc822msgid:$rid", "UTF-8")
+            } else {
+                "https://mail.google.com/mail/u/0/#all/${mail.id}"
+            }
+        }
 
         /**
          * Inhalts-Vorfilter für die Gmail-Suche (matcht auch im Mail-Body, also
