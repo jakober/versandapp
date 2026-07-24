@@ -176,7 +176,7 @@ private fun ConnectPrompt(modifier: Modifier = Modifier, onConnect: () -> Unit) 
             Text("Postfach verknüpfen", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             Text(
-                "VersandApp durchsucht deine Versand-Mails der letzten 60 Tage " +
+                "BlockTracking durchsucht deine Versand-Mails der letzten 60 Tage " +
                     "nach Trackingnummern – nur mit Lesezugriff und komplett auf " +
                     "deinem Gerät. Nichts wird importiert, ohne dass du es bestätigst.",
                 style = MaterialTheme.typography.bodyMedium,
