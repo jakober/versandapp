@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  VersandApp-Standardlogo: 4 abgerundete Blöcke (oben rechts gold, sonst orange)
-  mit 3D-Schattierung an den zur Mitte zeigenden Kanten (wie die Deckelklappen
-  eines Kartons von oben) – dadurch wirkt es leicht wie ein Paket.
+  VersandApp/BlockTracking-Original-Logo: 4 orange abgerundete Quadrate + großer
+  goldener isometrischer Würfel (Paket) mit hellem Kantenstreifen.
   Inhalt (0..328) via group-Transform auf ~50 % der 108er-Fläche = ~25 % Datei-Rand
   je Seite. Adaptive Icons werden vom Launcher gezoomt/an der Maske beschnitten,
-  daher muss der Datei-Rand deutlich größer sein als der gewünschte sichtbare Rand.
-  ~50 % Inhalt liegt sicher innerhalb der Icon-Maske, sodass die vier Quadrate
-  auch bei stärker beschneidenden Launchern nicht abgeschnitten werden.
+  daher liegt der Inhalt bei ~50 % sicher innerhalb der Maske (nicht abgeschnitten).
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -19,12 +16,12 @@
         android:scaleY="0.164634"
         android:translateX="27"
         android:translateY="27">
-        <!-- Grundflächen -->
+        <!-- 4 orange Quadrate -->
         <path
             android:fillColor="#E85510"
             android:pathData="M36,0 h80 a36,36 0 0 1 36,36 v80 a36,36 0 0 1 -36,36 h-80 a36,36 0 0 1 -36,-36 v-80 a36,36 0 0 1 36,-36 z" />
         <path
-            android:fillColor="#F0BE2E"
+            android:fillColor="#E85510"
             android:pathData="M212,0 h80 a36,36 0 0 1 36,36 v80 a36,36 0 0 1 -36,36 h-80 a36,36 0 0 1 -36,-36 v-80 a36,36 0 0 1 36,-36 z" />
         <path
             android:fillColor="#E85510"
@@ -32,30 +29,26 @@
         <path
             android:fillColor="#E85510"
             android:pathData="M212,176 h80 a36,36 0 0 1 36,36 v80 a36,36 0 0 1 -36,36 h-80 a36,36 0 0 1 -36,-36 v-80 a36,36 0 0 1 36,-36 z" />
-
-        <!-- TL: helle Bänder rechts + unten -->
+        <!-- Würfel: Deckfläche -->
+        <path
+            android:fillColor="#FFD54A"
+            android:pathData="M164,54 L269,109 L164,164 L59,109 Z" />
+        <!-- Würfel: linke Seite -->
+        <path
+            android:fillColor="#F5B91E"
+            android:pathData="M59,109 L164,164 L164,274 L59,219 Z" />
+        <!-- Würfel: rechte Seite -->
+        <path
+            android:fillColor="#D99A10"
+            android:pathData="M164,164 L269,109 L269,219 L164,274 Z" />
+        <!-- Heller Kantenstreifen, auf die Würfel-Silhouette geclippt -->
         <group>
-            <clip-path android:pathData="M36,0 h80 a36,36 0 0 1 36,36 v80 a36,36 0 0 1 -36,36 h-80 a36,36 0 0 1 -36,-36 v-80 a36,36 0 0 1 36,-36 z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M106,0 L152,0 L152,152 L106,152 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M0,106 L152,106 L152,152 L0,152 Z" />
-        </group>
-        <!-- TR: helle Bänder links + unten -->
-        <group>
-            <clip-path android:pathData="M212,0 h80 a36,36 0 0 1 36,36 v80 a36,36 0 0 1 -36,36 h-80 a36,36 0 0 1 -36,-36 v-80 a36,36 0 0 1 36,-36 z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M176,0 L222,0 L222,152 L176,152 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M176,106 L328,106 L328,152 L176,152 Z" />
-        </group>
-        <!-- BL: helle Bänder oben + rechts -->
-        <group>
-            <clip-path android:pathData="M36,176 h80 a36,36 0 0 1 36,36 v80 a36,36 0 0 1 -36,36 h-80 a36,36 0 0 1 -36,-36 v-80 a36,36 0 0 1 36,-36 z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M0,176 L152,176 L152,222 L0,222 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M106,176 L152,176 L152,328 L106,328 Z" />
-        </group>
-        <!-- BR: helle Bänder oben + links -->
-        <group>
-            <clip-path android:pathData="M212,176 h80 a36,36 0 0 1 36,36 v80 a36,36 0 0 1 -36,36 h-80 a36,36 0 0 1 -36,-36 v-80 a36,36 0 0 1 36,-36 z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M176,176 L328,176 L328,222 L176,222 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.55" android:pathData="M176,176 L222,176 L222,328 L176,328 Z" />
+            <clip-path
+                android:pathData="M164,54 L269,109 L269,219 L164,274 L59,219 L59,109 Z" />
+            <path
+                android:fillColor="#FFFFFF"
+                android:fillAlpha="0.6"
+                android:pathData="M153.5,59.5 L174.5,59.5 L174.5,274 L153.5,274 Z" />
         </group>
     </group>
 </vector>
