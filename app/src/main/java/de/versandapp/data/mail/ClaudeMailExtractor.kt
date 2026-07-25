@@ -39,7 +39,7 @@ class ClaudeMailExtractor(
         val response = api.createMessage(
             apiKey = apiKey,
             model = MODEL,
-            maxTokens = 2048,
+            maxTokens = 4096,
             system = SYSTEM_PROMPT,
             userText = mailDump,
             outputFormat = json.parseToJsonElement(OUTPUT_SCHEMA).jsonObject,
@@ -58,7 +58,7 @@ class ClaudeMailExtractor(
                 if (confidence != null && confidence != "high") return@mapNotNull null
                 val trackingNumber = shipment["tracking_number"]?.jsonPrimitive?.content
                     ?.let { CarrierDetector.normalize(it) }
-                    ?.takeIf { it.length >= 8 }
+                    ?.takeIf { it.length >= 8 && !CarrierDetector.looksLikeTimestamp(it) }
                     ?: return@mapNotNull null
                 val carrier = shipment["carrier"]?.jsonPrimitive?.content
                     ?.let { name -> Carrier.entries.firstOrNull { it.name == name } }

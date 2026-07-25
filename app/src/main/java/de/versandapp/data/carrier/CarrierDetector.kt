@@ -47,10 +47,24 @@ object CarrierDetector {
         Rule(Carrier.FEDEX, 55, Regex("^[0-9]{15}$")),
     )
 
+    /**
+     * Zeitstempel im Format JJJJMMTThhmm(ss) (12 oder 14 Ziffern) – tauchen in
+     * Mails massenhaft auf (z. B. eBay) und wurden sonst fälschlich als 14-stellige
+     * Hermes-/DPD-Nummer erkannt. Solche Werte sind nie Trackingnummern.
+     */
+    private val timestampRegex = Regex(
+        "^20[2-9][0-9](0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[0-2][0-9][0-5][0-9]([0-5][0-9])?$"
+    )
+
+    /** true, wenn die Nummer wie ein Datum/Zeitstempel aussieht (keine Trackingnummer). */
+    fun looksLikeTimestamp(rawTrackingNumber: String): Boolean =
+        timestampRegex.matches(normalize(rawTrackingNumber))
+
     /** Nach Konfidenz sortierte Kandidaten; leere Liste, wenn nichts passt. */
     fun detect(rawTrackingNumber: String): List<Carrier> {
         val normalized = normalize(rawTrackingNumber)
         if (normalized.isEmpty()) return emptyList()
+        if (timestampRegex.matches(normalized)) return emptyList()
         return rules
             .filter { it.regex.matches(normalized) }
             .sortedByDescending { it.confidence }

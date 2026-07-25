@@ -36,13 +36,26 @@ class ShipmentMailScanner(
 
         val primary = if (anthropicApiKey.isNotBlank()) {
             runCatching { claudeExtractor.extract(anthropicApiKey, mails) }
-                .getOrElse { ShipmentEmailParser.parseAll(mails) }
+                .getOrElse { e ->
+                    // WICHTIG: Bei KI-Fehler NICHT auf den permissiven Volltext-Parser
+                    // (parseAll) zurückfallen – der würde jede lange Zahl (Bestell-
+                    // nummern, eBay-Artikel-IDs, Zeitstempel) als Sendung einsammeln.
+                    // Stattdessen nur die zuverlässigen Funde behalten und den Grund
+                    // protokollieren, damit man den KI-Fehler im Protokoll sieht.
+                    DiagnosticsLog.add(
+                        "Postfach", "Claude",
+                        "Mail-Analyse fehlgeschlagen: ${e.message ?: "unbekannter Fehler"}",
+                        ok = false,
+                    )
+                    emptyList()
+                }
         } else {
+            // Ohne KI-Key: lokaler Regex-Parser (voller Umfang, weniger präzise).
             ShipmentEmailParser.parseAll(mails)
         }
 
-        // KI-/Regex-Ergebnisse zuerst (bessere Labels), zuverlässige Funde
-        // ergänzen fehlende Nummern. Duplikate über die Trackingnummer entfernen.
+        // KI-Ergebnisse zuerst (bessere Labels), zuverlässige Funde ergänzen
+        // fehlende Nummern. Duplikate über die Trackingnummer entfernen.
         return (primary + reliable).distinctBy { it.trackingNumber }
     }
 }
