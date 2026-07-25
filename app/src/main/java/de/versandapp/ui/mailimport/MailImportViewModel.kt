@@ -48,10 +48,19 @@ class MailImportViewModel(
         viewModelScope.launch {
             try {
                 val known = repository.trackedNumbers()
+                // Manueller Scan schaut immer mindestens die letzten 7 Tage zurück –
+                // auch wenn zuletzt erst kürzlich importiert wurde. So werden Mails
+                // gefunden, die vor dem letzten Scan ankamen oder damals übersehen
+                // wurden (z. B. eine DHL-Mail mit Nummer nur im Link). Bereits
+                // verfolgte Sendungen tauchen dabei nicht doppelt auf (siehe unten).
+                val nowSec = System.currentTimeMillis() / 1000
+                val sevenDaysAgo = nowSec - 7L * 24 * 3600
+                val last = settings.lastMailImportEpochSeconds
+                val afterEpochSeconds = if (last > 0L) minOf(last, sevenDaysAgo) else sevenDaysAgo
                 val allSuggestions = scanner.scan(
                     gmailAccessToken = accessToken,
                     anthropicApiKey = settings.anthropicApiKey,
-                    afterEpochSeconds = settings.lastMailImportEpochSeconds,
+                    afterEpochSeconds = afterEpochSeconds,
                 )
                 // Bereits verfolgte Sendungen: Status aus der Mail nachziehen
                 // (z. B. Amazon „in Zustellung"/„zugestellt").
