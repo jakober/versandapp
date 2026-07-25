@@ -132,7 +132,13 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
      * und ans Ende angehängt, damit sie beim Bereinigen nicht verloren gehen.
      */
     private fun stripHtml(html: String): String {
-        val urls = urlRegex.findAll(html).map { it.value }.distinct().toList()
+        val allUrls = urlRegex.findAll(html).map { it.value }.distinct().toList()
+        // Tracking-relevante Links nach vorne, reines Rauschen (Sprachumschalter,
+        // Bilder, CDN) weglassen. So überleben die Tracking-Links das spätere
+        // Kürzen für die KI (Mails wie DHL packen die echten Links weit unten).
+        val tracking = allUrls.filter { trackingHintRegex.containsMatchIn(it) }
+        val rest = allUrls.filter { !trackingHintRegex.containsMatchIn(it) && !noiseRegex.containsMatchIn(it) }
+        val urls = tracking + rest
         val visible = html
             .replace(Regex("(?is)<(script|style)[^>]*>.*?</\\1>"), " ")
             .replace(Regex("<[^>]+>"), " ")
@@ -141,6 +147,17 @@ class GmailService(private val client: OkHttpClient = OkHttpClient()) {
     }
 
     private val urlRegex = Regex("https?://[^\\s\"'<>]+")
+
+    /** Links, die auf eine Trackingnummer hindeuten (Parameter oder Pfadteile). */
+    private val trackingHintRegex = Regex(
+        "(?i)(idc|piececode|piece|nummer|tracknum|trackingnumber|tracking_number|" +
+            "sendungsnummer|sendungsverfolgung|verfolgen|/track)"
+    )
+
+    /** Reine Rausch-Links: Sprachumschalter (?u=…), Bilder/Assets, bekannte CDNs. */
+    private val noiseRegex = Regex(
+        "(?i)(\\?u=|\\.(png|gif|jpe?g|css|svg|woff2?)(\\?|$)|cdn\\.mailix\\.com|w3\\.org)"
+    )
 
     companion object {
         const val SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"

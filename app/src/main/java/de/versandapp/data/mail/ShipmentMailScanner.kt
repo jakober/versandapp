@@ -26,9 +26,23 @@ class ShipmentMailScanner(
         mails.forEach {
             DiagnosticsLog.addMail(it.from, it.subject, GmailService.gmailDeepLink(it))
         }
-        if (anthropicApiKey.isNotBlank()) {
-            runCatching { return claudeExtractor.extract(anthropicApiKey, mails) }
+
+        // Zuverlässige, strukturierte Funde (Trackingnummern aus Links wie
+        // piececode=/idc=, Amazon-Bestellnummern) IMMER mitnehmen – auf dem
+        // ungekürzten Text und unabhängig von der KI. So rutschen z. B. DHL-
+        // „unterwegs"-Mails, bei denen die Nummer nur tief im Button-Link steckt,
+        // nicht mehr durch (die KI kürzt lange Mails und übersieht sie sonst).
+        val reliable = ShipmentEmailParser.parseReliableAll(mails)
+
+        val primary = if (anthropicApiKey.isNotBlank()) {
+            runCatching { claudeExtractor.extract(anthropicApiKey, mails) }
+                .getOrElse { ShipmentEmailParser.parseAll(mails) }
+        } else {
+            ShipmentEmailParser.parseAll(mails)
         }
-        return ShipmentEmailParser.parseAll(mails)
+
+        // KI-/Regex-Ergebnisse zuerst (bessere Labels), zuverlässige Funde
+        // ergänzen fehlende Nummern. Duplikate über die Trackingnummer entfernen.
+        return (primary + reliable).distinctBy { it.trackingNumber }
     }
 }

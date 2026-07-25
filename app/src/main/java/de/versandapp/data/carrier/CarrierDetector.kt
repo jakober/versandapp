@@ -22,6 +22,9 @@ object CarrierDetector {
         // DHL Paket (DE): 20-stellig, meist mit 00340434 beginnend
         Rule(Carrier.DHL, 95, Regex("^00340434[0-9]{12}$")),
         Rule(Carrier.DHL, 70, Regex("^[0-9]{20}$")),
+        // DHL-Sendungsnummer mit Leitcode-Präfix 340… (18–20-stellig, z. B. aus
+        // dem piececode-Link, wo die führende 00 fehlt).
+        Rule(Carrier.DHL, 50, Regex("^340[0-9]{15,17}$")),
         Rule(Carrier.DHL, 60, Regex("^JJD[0-9]{16,20}$")),
         Rule(Carrier.DHL, 40, Regex("^[0-9]{12}$")),
         // Deutsche Post / internationale S10-Nummern, z. B. RR123456789DE
