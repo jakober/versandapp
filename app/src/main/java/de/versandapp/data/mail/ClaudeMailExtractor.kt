@@ -161,6 +161,13 @@ class ClaudeMailExtractor(
             IN_TRANSIT (versandt/unterwegs/auf dem Weg), OUT_FOR_DELIVERY
             (in Zustellung/in Auslieferung), DELIVERED (zugestellt/geliefert),
             sonst UNKNOWN.
+            WICHTIG zum Status: Achte auf die ZEITFORM. Zukunftsformen wie „wird
+            voraussichtlich am … zugestellt", „wird geliefert", „kommt morgen"
+            bedeuten NICHT DELIVERED – das ist höchstens IN_TRANSIT bzw.
+            OUT_FOR_DELIVERY. „in Zustellung" = OUT_FOR_DELIVERY, NICHT DELIVERED.
+            DELIVERED nur, wenn die Zustellung eindeutig BEREITS ERFOLGT ist
+            (z. B. Betreff „Zugestellt:"/„Geliefert:", „wurde zugestellt").
+            Nimm im Zweifel den Betreff als maßgebliche Statusquelle.
 
             confidence – WIE SICHER ist es eine echte Sendung mit echter
             Trackingnummer? Sei streng, lieber weglassen als falsch erfassen:
