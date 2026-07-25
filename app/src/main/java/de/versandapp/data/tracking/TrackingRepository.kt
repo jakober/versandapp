@@ -176,9 +176,16 @@ class TrackingRepository(
         )
     }
 
-    /** Ändert Label und Carrier eines Pakets (z. B. nach Korrektur durch den Nutzer). */
-    suspend fun updateParcel(parcel: Parcel, label: String?, carrier: Carrier) {
-        dao.update(parcel.copy(label = label?.takeIf { it.isNotBlank() }, carrier = carrier))
+    /** Ändert Label, Carrier und Status eines Pakets (Korrektur durch den Nutzer). */
+    suspend fun updateParcel(parcel: Parcel, label: String?, carrier: Carrier, status: ParcelStatus) {
+        dao.update(
+            parcel.copy(
+                label = label?.takeIf { it.isNotBlank() },
+                carrier = carrier,
+                status = status,
+                lastUpdated = System.currentTimeMillis(),
+            )
+        )
     }
 
     /**

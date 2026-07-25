@@ -222,9 +222,10 @@ fun ParcelDetailScreen(
                 trackingNumber = parcel.trackingNumber,
                 initialLabel = parcel.label,
                 initialCarrier = parcel.carrier,
+                initialStatus = parcel.status,
                 onDismiss = { showEditDialog = false },
-                onConfirm = { label, carrier ->
-                    viewModel.updateParcel(parcel, label, carrier)
+                onConfirm = { label, carrier, status ->
+                    viewModel.updateParcel(parcel, label, carrier, status)
                     showEditDialog = false
                 },
             )

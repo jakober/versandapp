@@ -3,7 +3,10 @@ package de.versandapp.data.tracking
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.ParcelStatus
 import java.io.IOException
+import java.time.Instant
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -104,21 +107,45 @@ class DhlTrackingProvider(
         val estimated = shipment["estimatedTimeOfDelivery"]?.jsonPrimitive?.content
             ?.let { parseTimestampOrNull(it) }
 
+        // DHLs oberster statusCode bleibt bei „transit", auch wenn die Sendung
+        // schon im Zustellfahrzeug ist. „In Zustellung" deshalb aus den Ereignissen
+        // ableiten (sofern nicht bereits zugestellt/fehlgeschlagen).
+        val topStatus = mapStatus(statusCode)
+        val outForDelivery = events.any { isOutForDelivery(it.description) }
+        val status = when {
+            topStatus == ParcelStatus.DELIVERED || topStatus == ParcelStatus.FAILED -> topStatus
+            outForDelivery -> ParcelStatus.OUT_FOR_DELIVERY
+            else -> topStatus
+        }
+
         return TrackingResult(
-            status = mapStatus(statusCode),
+            status = status,
             events = events,
             estimatedDelivery = estimated,
         )
     }
 
+    private fun isOutForDelivery(description: String): Boolean {
+        val d = description.lowercase()
+        return listOf(
+            "zustellfahrzeug", "in zustellung", "zur zustellung",
+            "wird heute zugestellt", "out for delivery",
+        ).any { d.contains(it) }
+    }
+
     private fun parseTimestamp(value: String): Long =
         parseTimestampOrNull(value) ?: System.currentTimeMillis()
 
-    private fun parseTimestampOrNull(value: String): Long? = try {
-        OffsetDateTime.parse(value).toInstant().toEpochMilli()
-    } catch (_: Exception) {
-        null
-    }
+    /**
+     * DHL liefert Zeitstempel mal mit Offset (2026-07-25T09:17:00+02:00), mal ohne
+     * (2026-07-25T09:17:00) oder als reines Instant. Alle Varianten versuchen –
+     * sonst bekämen alle Ereignisse „jetzt" als Zeit und die Reihenfolge (und damit
+     * das aktuelle Ereignis) wäre falsch.
+     */
+    private fun parseTimestampOrNull(value: String): Long? =
+        runCatching { OffsetDateTime.parse(value).toInstant().toEpochMilli() }.getOrNull()
+            ?: runCatching { Instant.parse(value).toEpochMilli() }.getOrNull()
+            ?: runCatching { LocalDateTime.parse(value).toInstant(ZoneOffset.UTC).toEpochMilli() }.getOrNull()
 
     private fun mapStatus(statusCode: String?): ParcelStatus = when (statusCode) {
         "pre-transit" -> ParcelStatus.REGISTERED

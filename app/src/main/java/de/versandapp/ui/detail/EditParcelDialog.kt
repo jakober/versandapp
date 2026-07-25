@@ -22,21 +22,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.versandapp.data.model.Carrier
+import de.versandapp.data.model.ParcelStatus
 
 /**
- * Dialog zum Bearbeiten eines vorhandenen Pakets: Name (Label) und
- * Dienstleister korrigieren. Die Trackingnummer bleibt fest.
+ * Dialog zum Bearbeiten eines vorhandenen Pakets: Name (Label), Dienstleister
+ * und Status korrigieren. Die Trackingnummer bleibt fest. Der manuelle Status
+ * hilft, falsch erkannte Zustände (z. B. fälschlich „Zugestellt") zu korrigieren.
  */
 @Composable
 fun EditParcelDialog(
     trackingNumber: String,
     initialLabel: String?,
     initialCarrier: Carrier,
+    initialStatus: ParcelStatus,
     onDismiss: () -> Unit,
-    onConfirm: (label: String?, carrier: Carrier) -> Unit,
+    onConfirm: (label: String?, carrier: Carrier, status: ParcelStatus) -> Unit,
 ) {
     var label by remember { mutableStateOf(initialLabel ?: "") }
     var carrier by remember { mutableStateOf(initialCarrier) }
+    var status by remember { mutableStateOf(initialStatus) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -71,10 +75,25 @@ fun EditParcelDialog(
                         )
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+                Text("Status", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ParcelStatus.entries.forEach { entry ->
+                        FilterChip(
+                            selected = entry == status,
+                            onClick = { status = entry },
+                            label = { Text(entry.displayName) },
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(label.takeIf { it.isNotBlank() }, carrier) }) {
+            TextButton(onClick = { onConfirm(label.takeIf { it.isNotBlank() }, carrier, status) }) {
                 Text("Speichern")
             }
         },

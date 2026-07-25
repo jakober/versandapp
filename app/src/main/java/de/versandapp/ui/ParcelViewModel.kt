@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import de.versandapp.VersandApp
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.Parcel
+import de.versandapp.data.model.ParcelStatus
 import de.versandapp.data.model.ParcelWithEvents
 import de.versandapp.data.settings.AppSettings
 import de.versandapp.data.settings.SettingsRepository
@@ -84,10 +85,10 @@ class ParcelViewModel(
         }
     }
 
-    /** Ändert Name (Label) und Carrier eines Pakets. */
-    fun updateParcel(parcel: Parcel, label: String?, carrier: Carrier) {
+    /** Ändert Name (Label), Carrier und Status eines Pakets. */
+    fun updateParcel(parcel: Parcel, label: String?, carrier: Carrier, status: ParcelStatus) {
         viewModelScope.launch {
-            repository.updateParcel(parcel, label, carrier)
+            repository.updateParcel(parcel, label, carrier, status)
         }
     }
 
