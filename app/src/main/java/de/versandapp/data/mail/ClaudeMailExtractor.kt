@@ -32,6 +32,13 @@ class ClaudeMailExtractor(
                 appendLine("Von: ${mail.from}")
                 appendLine("Betreff: ${mail.subject}")
                 appendLine(trimBody(mail.body))
+                // Hinweis: aus Tracking-Links extrahierte Kandidaten-Nummern, die
+                // sonst (z. B. bei sehr langen Mails) übersehen werden könnten.
+                val hints = ShipmentEmailParser.linkCandidateNumbers(mail)
+                if (hints.isNotEmpty()) {
+                    appendLine("Hinweis – aus Sendungs-Links extrahierte Kandidaten-Trackingnummern: " +
+                        hints.joinToString(", "))
+                }
                 appendLine()
             }
         }
@@ -138,6 +145,12 @@ class ClaudeMailExtractor(
                Amazon-Versandmails haben oft keine Trackingnummer. Nutze dann die
                Amazon-Bestellnummer (Format 123-1234567-1234567) als
                tracking_number mit carrier AMAZON.
+
+            Falls unter der Mail ein „Hinweis – aus Sendungs-Links extrahierte
+            Kandidaten-Trackingnummern: …" steht: Das sind zuverlässig aus den
+            Tracking-Links gezogene Nummern. Nutze sie, wenn die Mail wirklich
+            eine Sendung ankündigt/verfolgt – Carrier und Status bestimmst du
+            weiterhin selbst aus dem Mailtext.
 
             NIEMALS als Trackingnummer verwenden: Bestellnummer, Auftragsnummer,
             Rechnungsnummer, Kundennummer, Artikelnummer/SKU (z. B.

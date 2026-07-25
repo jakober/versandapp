@@ -27,35 +27,34 @@ class ShipmentMailScanner(
             DiagnosticsLog.addMail(it.from, it.subject, GmailService.gmailDeepLink(it))
         }
 
-        // Zuverlässige, strukturierte Funde (Trackingnummern aus Links wie
-        // piececode=/idc=, Amazon-Bestellnummern) IMMER mitnehmen – auf dem
-        // ungekürzten Text und unabhängig von der KI. So rutschen z. B. DHL-
-        // „unterwegs"-Mails, bei denen die Nummer nur tief im Button-Link steckt,
-        // nicht mehr durch (die KI kürzt lange Mails und übersieht sie sonst).
-        val reliable = ShipmentEmailParser.parseReliableAll(mails)
-
-        val primary = if (anthropicApiKey.isNotBlank()) {
-            runCatching { claudeExtractor.extract(anthropicApiKey, mails) }
-                .getOrElse { e ->
-                    // WICHTIG: Bei KI-Fehler NICHT auf den permissiven Volltext-Parser
-                    // (parseAll) zurückfallen – der würde jede lange Zahl (Bestell-
-                    // nummern, eBay-Artikel-IDs, Zeitstempel) als Sendung einsammeln.
-                    // Stattdessen nur die zuverlässigen Funde behalten und den Grund
-                    // protokollieren, damit man den KI-Fehler im Protokoll sieht.
-                    DiagnosticsLog.add(
-                        "Postfach", "Claude",
-                        "Mail-Analyse fehlgeschlagen: ${e.message ?: "unbekannter Fehler"}",
-                        ok = false,
-                    )
-                    emptyList()
-                }
-        } else {
+        if (anthropicApiKey.isBlank()) {
             // Ohne KI-Key: lokaler Regex-Parser (voller Umfang, weniger präzise).
-            ShipmentEmailParser.parseAll(mails)
+            return ShipmentEmailParser.parseAll(mails).distinctBy { it.trackingNumber }
         }
 
-        // KI-Ergebnisse zuerst (bessere Labels), zuverlässige Funde ergänzen
-        // fehlende Nummern. Duplikate über die Trackingnummer entfernen.
-        return (primary + reliable).distinctBy { it.trackingNumber }
+        val aiResults = runCatching { claudeExtractor.extract(anthropicApiKey, mails) }
+            .getOrElse { e ->
+                // Bei KI-Fehler NICHT auf den permissiven Volltext-Parser (parseAll)
+                // zurückfallen – der würde jede lange Zahl als Sendung einsammeln.
+                // Nur die zuverlässigen Link-/Amazon-Funde behalten und den Grund
+                // protokollieren.
+                DiagnosticsLog.add(
+                    "Postfach", "Claude",
+                    "Mail-Analyse fehlgeschlagen: ${e.message ?: "unbekannter Fehler"}",
+                    ok = false,
+                )
+                return ShipmentEmailParser.parseReliableAll(mails).distinctBy { it.trackingNumber }
+            }
+
+        // KI ist die maßgebliche Quelle für Carrier UND Status (sie liest den Text
+        // und hat die Kandidaten-Nummern als Hinweis bekommen). Sicherheitsnetz:
+        // sicher belegte Link-/Amazon-Nummern, die die KI dennoch ausgelassen hat,
+        // ergänzen – aber OHNE Keyword-Status (initialStatus=null); den echten
+        // Status liefert dann das Online-Tracking bzw. eine spätere Mail.
+        val aiNumbers = aiResults.map { it.trackingNumber }.toSet()
+        val supplement = ShipmentEmailParser.parseReliableAll(mails)
+            .filter { it.trackingNumber !in aiNumbers }
+            .map { it.copy(initialStatus = null) }
+        return (aiResults + supplement).distinctBy { it.trackingNumber }
     }
 }
