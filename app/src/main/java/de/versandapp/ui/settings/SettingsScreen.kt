@@ -46,19 +46,11 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenLog: () -> Unit,
 ) {
-    val initial = remember { viewModel.currentSettings() }
-    var anthropicKey by remember { mutableStateOf(initial.anthropicApiKey) }
-    var dhlKey by remember { mutableStateOf(initial.dhlApiKey) }
-    var ship24Key by remember { mutableStateOf(initial.ship24ApiKey) }
-    var easyPostKey by remember { mutableStateOf(initial.easyPostApiKey) }
-    var openAiKey by remember { mutableStateOf(initial.openAiApiKey) }
-    var openAiModel by remember { mutableStateOf(initial.openAiTrackingModel) }
     var notifyAlways by remember { mutableStateOf(viewModel.notifyAlways()) }
     var testPush by remember { mutableStateOf(viewModel.testPushEnabled()) }
     var archiveDays by remember { mutableStateOf(viewModel.archiveAfterDays().toString()) }
 
     fun persist() {
-        viewModel.saveSettings(anthropicKey, dhlKey, ship24Key, easyPostKey, openAiKey, openAiModel)
         viewModel.setArchiveAfterDays(archiveDays.toIntOrNull() ?: 14)
     }
 
@@ -81,16 +73,16 @@ fun SettingsScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text("Tracking-Quellen", style = MaterialTheme.typography.titleSmall)
+            Text("Postfach & Datenquelle", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))
-            KeyField("DHL API-Key", dhlKey, { dhlKey = it },
-                "Kostenlos von developer.dhl.com – DHL/Post über die offizielle API.")
-            KeyField("EasyPost API-Key", easyPostKey, { easyPostKey = it },
-                "Production-Key von easypost.com – günstige Tracking-API (~1-2 EUR/Monat, kein Monatsminimum).")
-            KeyField("Ship24 API-Key", ship24Key, { ship24Key = it },
-                "ship24.com – zuverlässige API für alle Dienste (bezahlt).")
-            KeyField("Anthropic API-Key (Claude)", anthropicKey, { anthropicKey = it },
-                "console.anthropic.com – nur noch für die Postfach-Erkennung (Mail-Analyse), nicht mehr fürs Tracking.")
+            Text(
+                "BlockTracking arbeitet komplett ohne API-Keys: Der Sendungsstatus " +
+                    "wird ausschließlich aus deinen Versand-Mails ermittelt (on-device). " +
+                    "Verknüpfe dein Postfach über das Mail-Symbol in der Paketliste; mit " +
+                    "„↻" bzw. Herunterziehen prüfst du es jederzeit neu.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Spacer(Modifier.height(8.dp))
             HorizontalDivider()
@@ -155,8 +147,8 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "Zeigt für jede Abfrage, welche Quelle was geliefert hat – inkl. " +
-                    "echtem Fehlergrund (z. B. warum DHL oder ChatGPT nichts fand).",
+                "Zeigt die gescannten Mails (zum Öffnen in Gmail) und die " +
+                    "Analyse-Ergebnisse pro Postfach-Prüfung – inkl. Fehlergründen.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -169,27 +161,4 @@ fun SettingsScreen(
             )
         }
     }
-}
-
-@Composable
-private fun KeyField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    hint: String,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(4.dp))
-    Text(
-        hint,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Spacer(Modifier.height(12.dp))
 }

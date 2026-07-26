@@ -6,15 +6,9 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import de.versandapp.data.ai.ClaudeTranslator
 import de.versandapp.data.db.AppDatabase
 import de.versandapp.data.log.DiagnosticsLog
 import de.versandapp.data.settings.SettingsRepository
-import de.versandapp.data.tracking.DemoTrackingProvider
-import de.versandapp.data.tracking.DhlTrackingProvider
-import de.versandapp.data.tracking.EasyPostProvider
-import de.versandapp.data.tracking.Ship24Provider
-import de.versandapp.data.tracking.TrackingProvider
 import de.versandapp.data.tracking.TrackingRepository
 import de.versandapp.worker.MailImportWorker
 import de.versandapp.worker.RefreshWorker
@@ -39,18 +33,14 @@ class VersandApp : Application() {
         settings = SettingsRepository(this)
         DiagnosticsLog.init(this)
 
-        val translator = ClaudeTranslator()
+        // Reine Postfach-App: kein Online-Tracking, keine API-Keys, keine KI-Cloud.
+        // Der Status kommt ausschließlich aus den Mails (on-device analysiert).
         repository = TrackingRepository(
             dao = AppDatabase.get(this).parcelDao(),
-            providersFactory = ::buildProviders,
-            translate = { texts ->
-                val key = settings.anthropicApiKey
-                if (key.isBlank()) texts else translator.toGerman(key, texts)
-            },
+            providersFactory = { emptyList() },
         )
 
         RefreshWorker.ensureChannel(this)
-        scheduleBackgroundRefresh()
         scheduleMailImport()
         // Test-Push-Takt nach Neustart wieder aufnehmen, falls eingeschaltet.
         if (settings.testPushEnabled) TestNotificationWorker.schedule(this, delayMinutes = 2)
@@ -65,43 +55,6 @@ class VersandApp : Application() {
 
     /** Feuert sofort eine einzelne Test-Push (für den „Jetzt testen"-Knopf). */
     fun sendTestNotificationNow() = TestNotificationWorker.showTestNotification(this)
-
-    /**
-     * Provider-Kette, bei jeder Aktualisierung neu aufgebaut (Keys aus den
-     * Einstellungen wirken sofort). Reihenfolge = Priorität; die Repository-
-     * Logik geht sie der Reihe nach durch und nimmt die erste Quelle, die
-     * verlässliche Daten liefert:
-     * 1. DHL-API (kostenlos, zuverlässigste Quelle) – nur für DHL/Post
-     * 2. EasyPost-API (günstig, pay-as-you-go) – alle Dienste weltweit
-     * 3. Ship24-API (bezahlt, zuverlässig)
-     * 4. Demo-Daten, nur wenn gar kein Key hinterlegt ist (App läuft sofort)
-     *
-     * KI (Claude/ChatGPT) wird bewusst NICHT mehr fürs Tracking genutzt (fand
-     * kaum verlässliche Daten) – nur noch für die Postfach-Erkennung.
-     */
-    private fun buildProviders(): List<TrackingProvider> = buildList {
-        val current = settings.current()
-        if (current.dhlApiKey.isNotBlank()) add(DhlTrackingProvider(current.dhlApiKey))
-        if (current.easyPostApiKey.isNotBlank()) add(EasyPostProvider(current.easyPostApiKey))
-        if (current.ship24ApiKey.isNotBlank()) add(Ship24Provider(current.ship24ApiKey))
-        if (isEmpty()) add(DemoTrackingProvider())
-    }
-
-    /** Stündliches Polling im Hintergrund; benachrichtigt bei Statuswechsel. */
-    private fun scheduleBackgroundRefresh() {
-        val request = PeriodicWorkRequestBuilder<RefreshWorker>(1, TimeUnit.HOURS)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            RefreshWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            request,
-        )
-    }
 
     /**
      * Automatischer Mail-Import alle 6 Stunden (sofern Gmail verknüpft ist);

@@ -59,7 +59,6 @@ class MailImportViewModel(
                 val afterEpochSeconds = if (last > 0L) minOf(last, sevenDaysAgo) else sevenDaysAgo
                 val allSuggestions = scanner.scan(
                     gmailAccessToken = accessToken,
-                    anthropicApiKey = settings.anthropicApiKey,
                     afterEpochSeconds = afterEpochSeconds,
                 )
                 // Bereits verfolgte Sendungen: Status aus der Mail nachziehen

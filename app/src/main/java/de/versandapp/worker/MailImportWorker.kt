@@ -52,7 +52,6 @@ class MailImportWorker(
         val result = try {
             val suggestions = ShipmentMailScanner().scan(
                 gmailAccessToken = token,
-                anthropicApiKey = app.settings.anthropicApiKey,
                 afterEpochSeconds = app.settings.lastMailImportEpochSeconds,
             )
             val known = app.repository.trackedNumbers()
