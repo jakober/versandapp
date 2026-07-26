@@ -36,9 +36,8 @@ class ShipmentMailScanner(
         }
 
         // Ohne on-device-Extractor: lokaler Regex-Parser (voller Umfang).
-        if (extractor == null) {
-            return ShipmentEmailParser.parseAll(mails).distinctBy { it.trackingNumber }
-        }
+        val extractor = extractor
+            ?: return ShipmentEmailParser.parseAll(mails).distinctBy { it.trackingNumber }
 
         val aiResults = runCatching { extractor.extract(mails) }
             .getOrElse { e ->
