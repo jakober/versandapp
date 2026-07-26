@@ -78,8 +78,8 @@ fun SettingsScreen(
             Text(
                 "BlockTracking arbeitet komplett ohne API-Keys: Der Sendungsstatus " +
                     "wird ausschließlich aus deinen Versand-Mails ermittelt (on-device). " +
-                    "Verknüpfe dein Postfach über das Mail-Symbol in der Paketliste; mit " +
-                    "„↻" bzw. Herunterziehen prüfst du es jederzeit neu.",
+                    "Verknüpfe dein Postfach über das Mail-Symbol in der Paketliste; " +
+                    "per Aktualisieren (Herunterziehen) prüfst du es jederzeit neu.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
