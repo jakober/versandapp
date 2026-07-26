@@ -50,7 +50,7 @@ class MailImportWorker(
         val token = authResult.accessToken ?: return Result.success()
 
         val result = try {
-            val suggestions = ShipmentMailScanner().scan(
+            val suggestions = app.buildMailScanner().scan(
                 gmailAccessToken = token,
                 afterEpochSeconds = app.settings.lastMailImportEpochSeconds,
             )

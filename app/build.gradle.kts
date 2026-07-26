@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.play.services.auth)
     implementation(libs.play.services.code.scanner)
+    implementation(libs.aicore)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)

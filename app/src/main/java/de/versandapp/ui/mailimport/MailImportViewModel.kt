@@ -118,7 +118,7 @@ class MailImportViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = checkNotNull(this[APPLICATION_KEY]) as VersandApp
-                MailImportViewModel(app.repository, app.settings)
+                MailImportViewModel(app.repository, app.settings, app.buildMailScanner())
             }
         }
     }

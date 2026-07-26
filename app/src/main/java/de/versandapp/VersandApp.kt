@@ -57,6 +57,15 @@ class VersandApp : Application() {
     fun sendTestNotificationNow() = TestNotificationWorker.showTestNotification(this)
 
     /**
+     * Baut den Postfach-Scanner mit on-device-Analyse (Gemini Nano), sofern das
+     * Gerät sie unterstützt – sonst nutzt der Scanner den lokalen Regex-Parser.
+     */
+    fun buildMailScanner(): de.versandapp.data.mail.ShipmentMailScanner =
+        de.versandapp.data.mail.ShipmentMailScanner(
+            extractor = de.versandapp.data.mail.createNanoExtractor(this),
+        )
+
+    /**
      * Automatischer Mail-Import alle 6 Stunden (sofern Gmail verknüpft ist);
      * neu gefundene Sendungen werden importiert und per Benachrichtigung
      * gemeldet.

@@ -43,13 +43,12 @@ object MailSync {
     suspend fun sync(
         app: VersandApp,
         afterEpochSeconds: Long,
-        scanner: ShipmentMailScanner = ShipmentMailScanner(),
     ): Result {
         if (!app.settings.gmailLinked) return Result(0, 0, ok = false)
         val token = silentToken(app) ?: return Result(0, 0, ok = false)
 
         val suggestions = try {
-            scanner.scan(gmailAccessToken = token, afterEpochSeconds = afterEpochSeconds)
+            app.buildMailScanner().scan(gmailAccessToken = token, afterEpochSeconds = afterEpochSeconds)
         } catch (_: Exception) {
             return Result(0, 0, ok = false)
         }
