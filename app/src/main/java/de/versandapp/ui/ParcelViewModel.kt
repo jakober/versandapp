@@ -10,10 +10,10 @@ import de.versandapp.VersandApp
 import de.versandapp.data.model.Carrier
 import de.versandapp.data.model.Parcel
 import de.versandapp.data.model.ParcelStatus
-import de.versandapp.data.mail.MailSync
 import de.versandapp.data.model.ParcelWithEvents
 import de.versandapp.data.settings.AppSettings
 import de.versandapp.data.settings.SettingsRepository
+import de.versandapp.data.tracking.RefreshOutcome
 import de.versandapp.data.tracking.TrackingRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,28 +93,61 @@ class ParcelViewModel(
     }
 
     /**
-     * „↻"/Pull-to-Refresh: das Postfach neu durchsuchen (reine Postfach-App, kein
-     * Online-Tracking mehr). Schaut mindestens die letzten 7 Tage zurück, legt neue
-     * Sendungen an und zieht den Status bekannter Sendungen aus den Mails nach.
+     * Manuelle Online-Prüfung aller offenen Sendungen mit Live-Fortschritt
+     * (über die Carrier-APIs). Der Dialog zeigt jeweils, welche Sendung gerade
+     * dran ist und was dabei herauskam.
      */
     fun refreshAll() {
         if (_isRefreshing.value) return
         viewModelScope.launch {
             _isRefreshing.value = true
+            progressDismissed = false
             try {
-                MailSync.sync(app, mailLookbackEpochSeconds())
+                val parcels = repository.openParcels()
+                var items = parcels.map { parcel ->
+                    RefreshProgressItem(
+                        parcelId = parcel.id,
+                        title = parcel.label ?: parcel.trackingNumber,
+                        carrier = parcel.carrier,
+                        state = RefreshItemState.Waiting,
+                    )
+                }
+                publishProgress(RefreshProgress(items, finished = parcels.isEmpty()))
+
+                parcels.forEachIndexed { index, parcel ->
+                    items = items.replaceAt(index) {
+                        it.copy(state = RefreshItemState.Checking("Wird geprüft …"))
+                    }
+                    publishProgress(RefreshProgress(items, finished = false))
+
+                    val outcome = repository.refresh(
+                        parcel.id,
+                        force = true,
+                        onProgress = { label ->
+                            items = items.replaceAt(index) {
+                                it.copy(state = RefreshItemState.Checking(label))
+                            }
+                            publishProgress(RefreshProgress(items, finished = false))
+                        },
+                    )
+                    val state = when (outcome) {
+                        is RefreshOutcome.Updated -> RefreshItemState.Done(
+                            buildString {
+                                append("${outcome.status.displayName} · ${outcome.eventCount} Ereignisse")
+                                if (outcome.source.isNotBlank()) append(" · ${outcome.source}")
+                            }
+                        )
+                        is RefreshOutcome.Skipped -> RefreshItemState.SkippedItem(outcome.reason)
+                        is RefreshOutcome.Failed -> RefreshItemState.Error(outcome.message)
+                    }
+                    items = items.replaceAt(index) { it.copy(state = state) }
+                    publishProgress(RefreshProgress(items, finished = false))
+                }
+                publishProgress(RefreshProgress(items, finished = true))
             } finally {
                 _isRefreshing.value = false
             }
         }
-    }
-
-    /** Fenster ab dem mind. die letzten 7 Tage durchsucht werden (auch nach jüngstem Scan). */
-    private fun mailLookbackEpochSeconds(): Long {
-        val now = System.currentTimeMillis() / 1000
-        val sevenDaysAgo = now - 7L * 24 * 3600
-        val last = settings.lastMailImportEpochSeconds
-        return if (last > 0L) minOf(last, sevenDaysAgo) else sevenDaysAgo
     }
 
     fun dismissRefreshProgress() {
@@ -133,15 +166,23 @@ class ParcelViewModel(
         mapIndexed { i, item -> if (i == index) transform(item) else item }
 
     /**
-     * Einzel-Aktualisierung (Wischgeste/Detail-Button): prüft ebenfalls das
-     * Postfach (kein Online-Tracking mehr) und zeigt am Paket einen Spinner.
+     * Einzel-Aktualisierung (Wischgeste/Detail-Button): prüft die Sendung online
+     * über die Carrier-API und zeigt am Paket einen Spinner + Schrittanzeige.
      */
     fun refresh(parcelId: Long) {
         if (parcelId in _refreshSteps.value) return
         viewModelScope.launch {
-            _refreshSteps.value = _refreshSteps.value + (parcelId to "Postfach wird geprüft …")
+            _refreshSteps.value = _refreshSteps.value + (parcelId to "Wird geprüft …")
             try {
-                MailSync.sync(app, mailLookbackEpochSeconds())
+                runCatching {
+                    repository.refresh(
+                        parcelId,
+                        force = true,
+                        onProgress = { label ->
+                            _refreshSteps.value = _refreshSteps.value + (parcelId to label)
+                        },
+                    )
+                }
             } finally {
                 _refreshSteps.value = _refreshSteps.value - parcelId
             }
@@ -149,6 +190,14 @@ class ParcelViewModel(
     }
 
     fun currentSettings(): AppSettings = settings.current()
+
+    /** Speichert die Tracking-Keys (DHL kostenlos, EasyPost/Ship24 bezahlt).
+     *  Für die KI-Mailanalyse ist kein Key nötig – sie läuft on-device (Nano). */
+    fun saveSettings(dhlApiKey: String, ship24ApiKey: String, easyPostApiKey: String) {
+        settings.dhlApiKey = dhlApiKey
+        settings.ship24ApiKey = ship24ApiKey
+        settings.easyPostApiKey = easyPostApiKey
+    }
 
     fun notifyAlways(): Boolean = settings.notifyAlways
 
